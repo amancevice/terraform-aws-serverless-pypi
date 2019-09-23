@@ -8,4 +8,6 @@
 # .tfvars files
 *.tfvars
 
+*.coverage
 *.zip
+coverage.xml

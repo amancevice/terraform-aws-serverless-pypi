@@ -35,3 +35,24 @@ module serverless_pypi {
   s3_presigned_url_ttl           = 900
 }
 ```
+
+## S3 Bucket Organization
+
+This tool is highly opinionated about how your S3 bucket is organized. Your root keyspace should only contain the auto-generated `index.html` and "directories" of your PyPI packages.
+
+Packages should exist one level deep in the bucket where the prefix is the name of the project.
+
+Example:
+
+```
+s3://your-bucket/
+├── index.html
+├── my-cool-package/
+│   ├── my-cool-package-0.1.2.tar.gz
+│   ├── my-cool-package-1.2.3.tar.gz
+│   └── my-cool-package-2.3.4.tar.gz
+└── my-other-package/
+    ├── my-other-package-0.1.2.tar.gz
+    ├── my-other-package-1.2.3.tar.gz
+    └── my-other-package-2.3.4.tar.gz
+```
