@@ -25,7 +25,7 @@ You will need to set up a VPC endpoint for this to work, however. Be warned that
 ```hcl
 module serverless_pypi {
   source                         = "amancevice/serverless-pypi/aws"
-  version =                      = "~> 0.1"
+  version                        = "~> 0.1"
   api_name                       = "pypi.example.com"
   api_endpoint_configuation_type = "REGIONAL"
   lambda_function_name_api       = "pypi-api"
