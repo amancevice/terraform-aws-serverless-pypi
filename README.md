@@ -12,17 +12,26 @@ Package uploads/removals on S3 will trigger a Lambda function that reindexes the
 
 [![Serverless PyPI](https://github.com/amancevice/terraform-aws-serverless-pypi/blob/master/serverless-pypi.png?raw=true)](https://github.com/amancevice/terraform-aws-serverless-pypi)
 
+## Auth
+
+Please note that this tool provides **NO** authentication layer for your PyPI server. This is difficult to implement because `pip` is not very forgiving with any kind of auth pattern outside Basic Auth.
+
+One solution to this is to deploy the API Gateway as a private endpoint inside a VPC. You can do this by setting `api_endpoint_configuation_type = "PRIVATE"`.
+
+You will need to set up a VPC endpoint for this to work, however. Be warned that creating a VPC endpoint for API Gateway can have unintended consequences if you are not prepared. I've broken things by doing this.
+
 ## Usage
 
 ```hcl
 module serverless_pypi {
-  source                       = "amancevice/serverless-pypi/aws"
-  version =                    = "~> 0.1"
-  api_name                     = "pypi.example.com"
-  lambda_function_name_api     = "pypi-api"
-  lambda_function_name_reindex = "pypi-reindex"
-  role_name                    = "pypi-role"
-  s3_bucket_name               = "pypi.example.com"
-  s3_presigned_url_ttl         = 900
+  source                         = "amancevice/serverless-pypi/aws"
+  version =                      = "~> 0.1"
+  api_name                       = "pypi.example.com"
+  api_endpoint_configuation_type = "REGIONAL"
+  lambda_function_name_api       = "pypi-api"
+  lambda_function_name_reindex   = "pypi-reindex"
+  role_name                      = "pypi-role"
+  s3_bucket_name                 = "pypi.example.com"
+  s3_presigned_url_ttl           = 900
 }
 ```
