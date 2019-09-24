@@ -119,7 +119,7 @@ resource aws_api_gateway_rest_api api {
   name        = local.api_name
 
   endpoint_configuration {
-    types = local.api_endpoint_configuration_type
+    types = [local.api_endpoint_configuration_type]
   }
 }
 
