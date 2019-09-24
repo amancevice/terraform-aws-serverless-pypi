@@ -8,7 +8,7 @@ variable api_description {
   description = "API Gateway REST API description."
 }
 
-variable api_endpoint_configuation_type {
+variable api_endpoint_configuration_type {
   default     = "REGIONAL"
   description = "API Gateway endpoint configuration type [EDGE | REGIONAL | PRIVATE]."
 }

@@ -3,24 +3,24 @@ terraform {
 }
 
 locals {
-  api_base_path                  = var.api_base_path
-  api_description                = var.api_description
-  api_endpoint_configuation_type = var.api_endpoint_configuation_type
-  api_name                       = var.api_name
-  lambda_description_api         = var.lambda_description_api
-  lambda_description_reindex     = var.lambda_description_reindex
-  lambda_function_name_api       = var.lambda_function_name_api
-  lambda_function_name_reindex   = var.lambda_function_name_reindex
-  lambda_handler_api             = "index.handler"
-  lambda_handler_reindex         = "index.reindex"
-  lambda_runtime                 = "python3.7"
-  log_group_retention_in_days    = var.log_group_retention_in_days
-  policy_name                    = var.policy_name
-  role_description               = var.role_description
-  role_name                      = var.role_name
-  s3_bucket_name                 = var.s3_bucket_name
-  s3_presigned_url_ttl           = var.s3_presigned_url_ttl
-  tags                           = var.tags
+  api_base_path                   = var.api_base_path
+  api_description                 = var.api_description
+  api_endpoint_configuration_type = var.api_endpoint_configuration_type
+  api_name                        = var.api_name
+  lambda_description_api          = var.lambda_description_api
+  lambda_description_reindex      = var.lambda_description_reindex
+  lambda_function_name_api        = var.lambda_function_name_api
+  lambda_function_name_reindex    = var.lambda_function_name_reindex
+  lambda_handler_api              = "index.handler"
+  lambda_handler_reindex          = "index.reindex"
+  lambda_runtime                  = "python3.7"
+  log_group_retention_in_days     = var.log_group_retention_in_days
+  policy_name                     = var.policy_name
+  role_description                = var.role_description
+  role_name                       = var.role_name
+  s3_bucket_name                  = var.s3_bucket_name
+  s3_presigned_url_ttl            = var.s3_presigned_url_ttl
+  tags                            = var.tags
 }
 
 data archive_file package {
@@ -118,8 +118,8 @@ resource aws_api_gateway_rest_api api {
   description = local.api_description
   name        = local.api_name
 
-  endpoint_configuation {
-    types = local.api_endpoint_configuation_type
+  endpoint_configuration {
+    types = local.api_endpoint_configuration_type
   }
 }
 
