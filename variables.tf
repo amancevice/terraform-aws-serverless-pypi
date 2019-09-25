@@ -1,3 +1,8 @@
+variable api_authorization {
+  default     = "NONE"
+  description = "API Gateway method authorization [NONE | CUSTOM | AWS_IAM | COGNITO_USER_POOLS]."
+}
+
 variable api_base_path {
   default     = "simple"
   description = "Root resource for PyPI index."
