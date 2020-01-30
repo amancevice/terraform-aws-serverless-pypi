@@ -14,7 +14,7 @@ locals {
   lambda_function_name_reindex    = var.lambda_function_name_reindex
   lambda_handler_api              = "index.handler"
   lambda_handler_reindex          = "index.reindex"
-  lambda_runtime                  = "python3.7"
+  lambda_runtime                  = "python3.8"
   log_group_retention_in_days     = var.log_group_retention_in_days
   policy_name                     = var.policy_name
   role_description                = var.role_description
