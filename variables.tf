@@ -69,7 +69,7 @@ variable s3_presigned_url_ttl {
 }
 
 variable tags {
-  default     = {}
-  type        = "map"
   description = "Tags for resources in module."
+  type        = map
+  default     = {}
 }
