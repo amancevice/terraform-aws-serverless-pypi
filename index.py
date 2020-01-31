@@ -1,13 +1,13 @@
 import json
 import os
+import string
 import textwrap
-from string import Template
 
 import boto3
 
 BASE_PATH = os.getenv('BASE_PATH') or 'simple'
-ANCHOR = Template('\n  <a href="$href">$name</a><br>')
-INDEX = Template(textwrap.dedent('''\
+ANCHOR = string.Template('\n  <a href="$href">$name</a><br>')
+INDEX = string.Template(textwrap.dedent('''\
     <!DOCTYPE html>
     <html>
     <head>
@@ -141,9 +141,11 @@ def reindex(event, *_):
 
     # Get package names from common prefixes
     pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Delimiter='/')
-    pkgs = (x.get('Prefix').strip('/')
-            for page in pages
-            for x in page.get('CommonPrefixes'))
+    pkgs = (
+        x.get('Prefix').strip('/')
+        for page in pages
+        for x in page.get('CommonPrefixes')
+    )
 
     # Construct HTML
     anchors = (ANCHOR.safe_substitute(href=pkg, name=pkg) for pkg in pkgs)
