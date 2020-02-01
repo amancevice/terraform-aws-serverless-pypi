@@ -26,7 +26,7 @@ def proxy_reponse(body):
     # Wrap HTML in proxy response object
     resp = {
         'body': body,
-        'headers': {'Content-Type': 'text/html'},
+        'headers': {'Content-Type': 'text/html; charset=UTF-8'},
         'statusCode': 200,
     }
     return resp
