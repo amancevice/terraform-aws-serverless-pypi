@@ -3,6 +3,11 @@ variable api_authorization {
   default     = "NONE"
 }
 
+variable api_authorizer_id {
+  description = "API Gateway authorizer ID."
+  default     = null
+}
+
 variable api_base_path {
   description = "PyPI index API Gateway base path."
   default     = "simple"
@@ -56,7 +61,7 @@ variable role_description {
 }
 
 variable role_name {
-  description = "Lambda function/authorizer IAM role name."
+  description = "Lambda function role name."
 }
 
 variable s3_bucket_name {

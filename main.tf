@@ -4,6 +4,7 @@ terraform {
 
 locals {
   api_authorization               = var.api_authorization
+  api_authorizer_id               = var.api_authorizer_id
   api_base_path                   = var.api_base_path
   api_description                 = var.api_description
   api_endpoint_configuration_type = var.api_endpoint_configuration_type
@@ -97,6 +98,7 @@ resource aws_api_gateway_integration root_get {
 
 resource aws_api_gateway_method proxy_get {
   authorization = local.api_authorization
+  authorizer_id = local.api_authorizer_id
   http_method   = "GET"
   resource_id   = aws_api_gateway_resource.proxy.id
   rest_api_id   = aws_api_gateway_rest_api.api.id
@@ -104,6 +106,7 @@ resource aws_api_gateway_method proxy_get {
 
 resource aws_api_gateway_method root_get {
   authorization = local.api_authorization
+  authorizer_id = local.api_authorizer_id
   http_method   = "GET"
   resource_id   = aws_api_gateway_rest_api.api.root_resource_id
   rest_api_id   = aws_api_gateway_rest_api.api.id
