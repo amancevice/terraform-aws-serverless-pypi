@@ -5,7 +5,7 @@ import string
 
 import boto3
 
-BASE_PATH = os.getenv('BASE_PATH')
+BASE_PATH = os.path.join('/', os.getenv('BASE_PATH') or '').strip('/')
 ANCHOR = string.Template('<a href="$href">$name</a><br>')
 INDEX = string.Template(
     '<!DOCTYPE html><html><head><title>$title</title></head>'
@@ -25,12 +25,11 @@ def proxy_reponse(body):
         :return dict: API Gateway Lambda proxy response
     """
     # Wrap HTML in proxy response object
-    resp = {
+    return {
         'body': body,
         'headers': {'Content-Type': 'text/html; charset=UTF-8'},
         'statusCode': 200,
     }
-    return resp
 
 
 def get_index():
@@ -59,7 +58,11 @@ def get_package_index(package):
     """ Handle GET /simple/<pkg>/ requests. """
     # Get keys for given package
     pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Prefix=f'{package}/')
-    keys = [key.get('Key') for page in pages for key in page.get('Contents')]
+    keys = [
+        key.get('Key')
+        for page in pages
+        for key in page.get('Contents') or []
+    ]
 
     # Convert keys to presigned URLs
     hrefs = [presign(key) for key in keys]
@@ -84,18 +87,6 @@ def get_package_index(package):
     return resp
 
 
-def redirect(path):
-    """ Redirect requests. """
-    resp = {'statusCode': 301, 'headers': {'Location': path}}
-    return resp
-
-
-def unauthorized():
-    """ Bad request. """
-    resp = {'statusCode': 401}
-    return resp
-
-
 def handler(event, *_):
     """ Handle API Gateway proxy request. """
     print(f'EVENT {json.dumps(event)}')
@@ -105,20 +96,28 @@ def handler(event, *_):
     method = event.get('httpMethod')
 
     # Get HTTP request path / package path
-    path = event.get('path')
-    package = re.sub(f'^/{BASE_PATH}/?', '', path)
+    path = event.get('path').strip('/')
+    match = re.match(f'^{BASE_PATH}/?([^/]+)?$', path)
+    package = match.group(1) if match else None
 
-    # GET /{BASE_PATH}/<pkg>/
-    if 'GET' == method and package:
-        res = get_package_index(package)
+    # GET /*
+    if method in ['GET', 'HEAD']:
 
-    # GET /{BASE_PATH}
-    elif 'GET' == method:
-        res = get_index()
+        # 200 GET /{BASE_PATH}/{pkg}
+        if package:
+            res = get_package_index(package)
 
-    # HEAD /*
-    elif 'HEAD' == method:
-        res = {'statusCode': 201}
+        # 200 GET /{BASE_PATH}
+        elif path == BASE_PATH:
+            res = get_index()
+
+        # 301 /{BASE_PATH}
+        elif '' == path:
+            res = redirect(f'/{BASE_PATH}')
+
+        # 401 Unauthorized
+        else:
+            res = unauthorized()
 
     # 401 Unauthorized
     else:
@@ -127,6 +126,11 @@ def handler(event, *_):
     # Return proxy response
     print(f'RESPONSE {json.dumps(res)}')
     return res
+
+
+def redirect(path):
+    """ Redirect requests. """
+    return {'statusCode': 301, 'headers': {'Location': path}}
 
 
 def reindex(event, *_):
@@ -151,3 +155,8 @@ def reindex(event, *_):
     # Upload to S3 as index.html
     res = S3.put_object(Bucket=S3_BUCKET, Key='index.html', Body=body.encode())
     return res
+
+
+def unauthorized():
+    """ Bad request. """
+    return {'statusCode': 401}

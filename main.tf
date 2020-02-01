@@ -86,9 +86,29 @@ resource aws_api_gateway_integration proxy_get {
   uri                     = aws_lambda_function.api.invoke_arn
 }
 
+resource aws_api_gateway_integration proxy_head {
+  content_handling        = "CONVERT_TO_TEXT"
+  http_method             = aws_api_gateway_method.proxy_head.http_method
+  integration_http_method = "POST"
+  resource_id             = aws_api_gateway_resource.proxy.id
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.api.invoke_arn
+}
+
 resource aws_api_gateway_integration root_get {
   content_handling        = "CONVERT_TO_TEXT"
-  http_method             = aws_api_gateway_method.proxy_get.http_method
+  http_method             = aws_api_gateway_method.root_get.http_method
+  integration_http_method = "POST"
+  resource_id             = aws_api_gateway_rest_api.api.root_resource_id
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.api.invoke_arn
+}
+
+resource aws_api_gateway_integration root_head {
+  content_handling        = "CONVERT_TO_TEXT"
+  http_method             = aws_api_gateway_method.root_head.http_method
   integration_http_method = "POST"
   resource_id             = aws_api_gateway_rest_api.api.root_resource_id
   rest_api_id             = aws_api_gateway_rest_api.api.id
@@ -104,10 +124,26 @@ resource aws_api_gateway_method proxy_get {
   rest_api_id   = aws_api_gateway_rest_api.api.id
 }
 
+resource aws_api_gateway_method proxy_head {
+  authorization = local.api_authorization
+  authorizer_id = local.api_authorizer_id
+  http_method   = "HEAD"
+  resource_id   = aws_api_gateway_resource.proxy.id
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+}
+
 resource aws_api_gateway_method root_get {
   authorization = local.api_authorization
   authorizer_id = local.api_authorizer_id
   http_method   = "GET"
+  resource_id   = aws_api_gateway_rest_api.api.root_resource_id
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+}
+
+resource aws_api_gateway_method root_head {
+  authorization = local.api_authorization
+  authorizer_id = local.api_authorizer_id
+  http_method   = "HEAD"
   resource_id   = aws_api_gateway_rest_api.api.root_resource_id
   rest_api_id   = aws_api_gateway_rest_api.api.id
 }
