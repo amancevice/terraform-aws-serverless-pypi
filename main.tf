@@ -15,6 +15,8 @@ locals {
   lambda_function_name_reindex    = var.lambda_function_name_reindex
   lambda_handler_api              = "index.handler"
   lambda_handler_reindex          = "index.reindex"
+  lambda_memory_size_api          = var.lambda_memory_size_api
+  lambda_memory_size_reindex      = var.lambda_memory_size_reindex
   lambda_runtime                  = "python3.8"
   log_group_retention_in_days     = var.log_group_retention_in_days
   policy_name                     = var.policy_name
@@ -193,6 +195,7 @@ resource aws_lambda_function api {
   filename         = data.archive_file.package.output_path
   function_name    = local.lambda_function_name_api
   handler          = local.lambda_handler_api
+  memory_size      = local.lambda_memory_size_api
   role             = aws_iam_role.role.arn
   runtime          = local.lambda_runtime
   source_code_hash = data.archive_file.package.output_base64sha256
@@ -212,6 +215,7 @@ resource aws_lambda_function reindex {
   filename         = data.archive_file.package.output_path
   function_name    = local.lambda_function_name_reindex
   handler          = local.lambda_handler_reindex
+  memory_size      = local.lambda_memory_size_reindex
   role             = aws_iam_role.role.arn
   runtime          = local.lambda_runtime
   source_code_hash = data.archive_file.package.output_base64sha256

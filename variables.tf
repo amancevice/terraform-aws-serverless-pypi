@@ -45,6 +45,16 @@ variable lambda_function_name_reindex {
   description = "Reindexer Lambda function name."
 }
 
+variable lambda_memory_size_api {
+  description = "REST API Lambda function memory size."
+  default     = 128
+}
+
+variable lambda_memory_size_reindex {
+  description = "Reindexer Lambda function memory size."
+  default     = 128
+}
+
 variable log_group_retention_in_days {
   description = "CloudWatch log group retention period."
   default     = 30
