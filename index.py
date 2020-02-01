@@ -1,23 +1,15 @@
 import json
 import os
 import string
-import textwrap
 
 import boto3
 
 BASE_PATH = os.getenv('BASE_PATH') or 'simple'
-ANCHOR = string.Template('\n  <a href="$href">$name</a><br>')
-INDEX = string.Template(textwrap.dedent('''\
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>$title</title>
-    </head>
-    <body>
-      <h1>$title</h1>$anchors
-    </body>
-    </html>
-'''))
+ANCHOR = string.Template('<a href="$href">$name</a><br>')
+INDEX = string.Template(
+    '<!DOCTYPE html><html><head><title>$title</title></head>'
+    '<body><h1>$title</h1>$anchors</body></html>'
+)
 
 S3 = boto3.client('s3')
 S3_BUCKET = os.getenv('S3_BUCKET')
@@ -97,9 +89,9 @@ def redirect(path):
     return resp
 
 
-def forbidden():
+def unauthorized():
     """ Bad request. """
-    resp = {'statusCode': 403}
+    resp = {'statusCode': 401}
     return resp
 
 
@@ -107,28 +99,37 @@ def handler(event, *_):
     """ Handle API Gateway proxy request. """
     print(f'EVENT {json.dumps(event)}')
 
+    # Get HTTP request method
+    method = event.get('httpMethod')
+
     # Get HTTP request path
     path = event.get('path').strip('/')
 
     # Split into path parts
     parts = path.split('/')
 
-    # GET /
-    if len(parts) == 1 and path == '':
-        res = redirect(BASE_PATH)
+    # GET /*
+    if 'GET' == method:
+        # GET /
+        if len(parts) == 1 and path == '':
+            res = redirect(BASE_PATH)
 
-    # GET /simple/
-    elif len(parts) == 1 and path == BASE_PATH:
-        res = get_index()
+        # GET /simple/
+        elif len(parts) == 1 and path == BASE_PATH:
+            res = get_index()
 
-    # GET /simple/<pkg>/
-    elif len(parts) == 2:
-        _, package = parts
-        res = get_package_index(package)
+        # GET /simple/<pkg>/
+        elif len(parts) == 2:
+            _, package = parts
+            res = get_package_index(package)
 
-    # 403 Forbidden
+    # HEAD /*
+    elif 'HEAD' == method:
+        res = {'statusCode': 201}
+
+    # 401 Unauthorized
     else:
-        res = forbidden()
+        res = unauthorized()
 
     # Return proxy response
     print(f'RESPONSE {json.dumps(res)}')
