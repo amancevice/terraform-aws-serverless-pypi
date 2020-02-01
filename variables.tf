@@ -1,21 +1,21 @@
 variable api_authorization {
-  default     = "NONE"
   description = "API Gateway method authorization [NONE | CUSTOM | AWS_IAM | COGNITO_USER_POOLS]."
+  default     = "NONE"
 }
 
 variable api_base_path {
+  description = "PyPI index API Gateway base path."
   default     = "simple"
-  description = "Root resource for PyPI index."
 }
 
 variable api_description {
-  default     = "PyPI service"
   description = "API Gateway REST API description."
+  default     = "PyPI service"
 }
 
 variable api_endpoint_configuration_type {
-  default     = "REGIONAL"
   description = "API Gateway endpoint configuration type [EDGE | REGIONAL | PRIVATE]."
+  default     = "REGIONAL"
 }
 
 variable api_name {
@@ -23,53 +23,53 @@ variable api_name {
 }
 
 variable lambda_description_api {
+  description = "REST API Lambda function description."
   default     = "PyPI service REST API"
-  description = "Lambda function for REST API description."
 }
 
 variable lambda_description_reindex {
+  description = "Reindexer Lambda function decription."
   default     = "Reindex PyPI root"
-  description = "Lambda function decription for reindexer."
 }
 
 variable lambda_function_name_api {
-  description = "Lambda function name for REST API."
+  description = "REST API Lambda function name."
 }
 
 variable lambda_function_name_reindex {
-  description = "Lambda function name for reindexer."
+  description = "Reindexer Lambda function name."
 }
 
 variable log_group_retention_in_days {
-  default     = 30
   description = "CloudWatch log group retention period."
+  default     = 30
 }
 
 variable policy_name {
-  default     = "pypi-lambda-permissions"
   description = "IAM role inline policy name."
+  default     = "pypi-lambda-permissions"
 }
 
 variable role_description {
+  description = "Lambda functions IAM role description."
   default     = "PyPI Lambda permissions"
-  description = "IAM role description for Lambda functions."
 }
 
 variable role_name {
-  description = "IAM role name for Lambda functions."
+  description = "Lambda function/authorizer IAM role name."
 }
 
 variable s3_bucket_name {
-  description = "S3 bucket name for PyPI index."
+  description = "PyPI index S3 bucket name."
 }
 
 variable s3_presigned_url_ttl {
+  description = "PyPI package presigned URL expiration in seconds."
   default     = 900
-  description = "Presigned URL for PyPI package expiration in seconds."
 }
 
 variable tags {
-  description = "Tags for resources in module."
+  description = "Resource tags."
   type        = map
   default     = {}
 }
