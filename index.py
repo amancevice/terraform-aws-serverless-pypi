@@ -1,10 +1,11 @@
 import json
 import os
+import re
 import string
 
 import boto3
 
-BASE_PATH = os.getenv('BASE_PATH') or 'simple'
+BASE_PATH = os.getenv('BASE_PATH')
 ANCHOR = string.Template('<a href="$href">$name</a><br>')
 INDEX = string.Template(
     '<!DOCTYPE html><html><head><title>$title</title></head>'
@@ -98,30 +99,22 @@ def unauthorized():
 def handler(event, *_):
     """ Handle API Gateway proxy request. """
     print(f'EVENT {json.dumps(event)}')
+    print(f'BASE_PATH {BASE_PATH!r}')
 
     # Get HTTP request method
     method = event.get('httpMethod')
 
-    # Get HTTP request path
-    path = event.get('path').strip('/')
+    # Get HTTP request path / package path
+    path = event.get('path')
+    package = re.sub(f'^/{BASE_PATH}/?', '', path)
 
-    # Split into path parts
-    parts = path.split('/')
+    # GET /{BASE_PATH}/<pkg>/
+    if 'GET' == method and package:
+        res = get_package_index(package)
 
-    # GET /*
-    if 'GET' == method:
-        # GET /
-        if len(parts) == 1 and path == '':
-            res = redirect(BASE_PATH)
-
-        # GET /simple/
-        elif len(parts) == 1 and path == BASE_PATH:
-            res = get_index()
-
-        # GET /simple/<pkg>/
-        elif len(parts) == 2:
-            _, package = parts
-            res = get_package_index(package)
+    # GET /{BASE_PATH}
+    elif 'GET' == method:
+        res = get_index()
 
     # HEAD /*
     elif 'HEAD' == method:

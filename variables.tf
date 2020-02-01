@@ -10,7 +10,7 @@ variable api_authorizer_id {
 
 variable api_base_path {
   description = "PyPI index API Gateway base path."
-  default     = "simple"
+  default     = null
 }
 
 variable api_description {
