@@ -8,13 +8,15 @@ jobs:
     - uses: actions/setup-python@v1
     - name: Set up code climate
       uses: amancevice/code-climate-action@v0
+      env:
+        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       with:
-        cc_test_reporter_id: ${{ secrets.CC_TEST_REPORTER_ID }}
         command: before-build
     - run: pip install boto3 pytest pytest-cov
     - run: py.test
     - name: Send coverage report
       uses: amancevice/code-climate-action@v0
+      env:
+        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
       with:
-        cc_test_reporter_id: ${{ secrets.CC_TEST_REPORTER_ID }}
         command: after-build
