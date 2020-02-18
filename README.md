@@ -1,6 +1,8 @@
 # Serverless PyPI
 
 [![py.test](https://github.com/amancevice/terraform-aws-serverless-pypi/workflows/py.test/badge.svg)](https://github.com/amancevice/terraform-aws-serverless-pypi/actions)
+[![Maintainability](https://api.codeclimate.com/v1/badges/7198bd49152ff23fbe93/maintainability)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/7198bd49152ff23fbe93/test_coverage)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/test_coverage)
 
 S3-backed serverless PyPI.
 
