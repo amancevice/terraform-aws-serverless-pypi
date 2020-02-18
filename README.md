@@ -1,5 +1,7 @@
 # Serverless PyPI
 
+[![py.test](https://github.com/amancevice/terraform-aws-serverless-pypi/workflows/py.test/badge.svg)](https://github.com/amancevice/terraform-aws-serverless-pypi/actions)
+
 S3-backed serverless PyPI.
 
 Requests to your PyPI server will be proxied through a Lambda function that pulls content from an S3 bucket and reponds with the same HTML content that you might find in a conventional PyPI server.
