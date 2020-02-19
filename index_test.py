@@ -109,7 +109,7 @@ def test_handler_get_package(mock_pkg):
 
 
 @pytest.mark.parametrize('http_method,path,status_code', [
-    ('GET', '/fizz/buzz/jazz', 401),
+    ('GET', '/fizz/buzz/jazz', 403),
     ('POST', '/fizz/buzz', 403),
 ])
 def test_handler_reject(http_method, path, status_code):

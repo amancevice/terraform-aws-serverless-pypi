@@ -12,6 +12,8 @@ INDEX = string.Template(
     '<body><h1>$title</h1>$anchors</body></html>'
 )
 
+ROUTER = f'^{BASE_PATH}$|^{BASE_PATH}/([^/]+)$'
+
 S3 = boto3.client('s3')
 S3_BUCKET = os.getenv('S3_BUCKET')
 S3_PAGINATOR = S3.get_paginator('list_objects')
@@ -19,6 +21,7 @@ S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 
 
 # Lambda helpers
+
 
 def get_index():
     """ GET /{BASE_PATH}/ """
@@ -28,10 +31,10 @@ def get_index():
     return res
 
 
-def get_package_index(package):
+def get_package_index(name):
     """ GET /{BASE_PATH}/<pkg>/ """
     # Get keys for given package
-    pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Prefix=f'{package}/')
+    pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Prefix=f'{name}/')
     keys = [
         key.get('Key')
         for page in pages
@@ -50,7 +53,7 @@ def get_package_index(package):
         for href, name in zip(hrefs, names)
     ]
     body = INDEX.safe_substitute(
-        title=f'Links for {package}',
+        title=f'Links for {name}',
         anchors=''.join(anchors)
     )
 
@@ -59,6 +62,28 @@ def get_package_index(package):
 
     # Return Lambda prozy response
     return resp
+
+
+def get_response(path):
+    """ GET /{BASE_PATH}/* """
+
+    match = re.match(ROUTER, path)
+    name = match.group(1) if match else None
+
+    # GET /{BASE_PATH}/*
+    if match and name:
+        return get_package_index(name)
+
+    # GET /{BASE_PATH}
+    elif match:
+        return get_index()
+
+    # GET /
+    elif '' == path:
+        return redirect(f'/{BASE_PATH}')
+
+    # 403 Forbidden
+    return reject(403)
 
 
 def presign(key):
@@ -101,39 +126,19 @@ def reject(status_code):
 
 # Lambda handlers
 
+
 def handler(event, *_):
     """ Handle API Gateway proxy request. """
     print(f'EVENT {json.dumps(event)}')
     print(f'BASE_PATH {BASE_PATH!r}')
 
-    # Get HTTP request method
+    # Get HTTP request method/path
     method = event.get('httpMethod')
-
-    # Get HTTP request path / package path
     path = event.get('path').strip('/')
-    match = re.match(f'^{BASE_PATH}/?([^/]+)?$', path)
-    package = match.group(1) if match else None
 
-    # GET /*
+    # Get HTTP response
     if method in ['GET', 'HEAD']:
-
-        # 200 GET /{BASE_PATH}/{pkg}
-        if package:
-            res = get_package_index(package)
-
-        # 200 GET /{BASE_PATH}
-        elif path == BASE_PATH:
-            res = get_index()
-
-        # 301 /{BASE_PATH}
-        elif '' == path:
-            res = redirect(f'/{BASE_PATH}')
-
-        # 401 Unauthorized
-        else:
-            res = reject(401)
-
-    # 403 Forbidden
+        res = get_response(path)
     else:
         res = reject(403)
 
