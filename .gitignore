@@ -9,5 +9,6 @@
 *.tfvars
 
 *.coverage
+*.env
 *.zip
 coverage.xml
