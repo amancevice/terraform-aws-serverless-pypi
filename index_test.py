@@ -1,6 +1,8 @@
 import io
 from unittest import mock
 
+import pytest
+
 with mock.patch('boto3.client'):
     import index
     index.BASE_PATH = 'simple'
@@ -20,6 +22,17 @@ PACKAGE_INDEX = (
     '<a href="<presigned-url>">fizz-1.2.3.tar.gz</a><br>'
     '</body></html>'
 )
+S3_REINDEX_RESPONSE = [
+    {'CommonPrefixes': [{'Prefix': 'fizz/'}, {'Prefix': 'buzz/'}]},
+]
+S3_INDEX_RESPONSE = [
+    {
+        'Contents': [
+            {'Key': 'simple/fizz/fizz-0.1.2.tar.gz'},
+            {'Key': 'simple/fizz/fizz-1.2.3.tar.gz'},
+        ],
+    },
+]
 
 
 def test_proxy_reponse():
@@ -47,14 +60,7 @@ def test_get_index():
 
 def test_get_package_index():
     index.S3.generate_presigned_url.return_value = "<presigned-url>"
-    index.S3_PAGINATOR.paginate.return_value = iter([
-        {
-            'Contents': [
-                {'Key': 'simple/fizz/fizz-0.1.2.tar.gz'},
-                {'Key': 'simple/fizz/fizz-1.2.3.tar.gz'},
-            ],
-        },
-    ])
+    index.S3_PAGINATOR.paginate.return_value = iter(S3_INDEX_RESPONSE)
     ret = index.get_package_index('fizz')
     exp = {
         'body': PACKAGE_INDEX,
@@ -70,8 +76,8 @@ def test_redirect():
     assert ret == exp
 
 
-def test_unauthorized():
-    ret = index.unauthorized()
+def test_reject():
+    ret = index.reject(401)
     exp = {'statusCode': 401}
     assert ret == exp
 
@@ -89,7 +95,7 @@ def test_handler_get_root():
 
 
 @mock.patch('index.get_index')
-def test_handler_get_simple(mock_idx):
+def test_handler_get(mock_idx):
     mock_idx.return_value = index.proxy_reponse(SIMPLE_INDEX)
     index.handler({'httpMethod': 'GET', 'path': '/simple/'})
     mock_idx.assert_called_once_with()
@@ -102,24 +108,18 @@ def test_handler_get_package(mock_pkg):
     mock_pkg.assert_called_once_with('fizz')
 
 
-@mock.patch('index.unauthorized')
-def test_handler_get_unauthorized(mock_401):
-    mock_401.return_value = {'statusCode': 403}
-    index.handler({'httpMethod': 'GET', 'path': '/fizz/buzz/jazz'})
-    mock_401.assert_called_once_with()
-
-
-@mock.patch('index.unauthorized')
-def test_handler_post_unauthorized(mock_401):
-    mock_401.return_value = {'statusCode': 401}
-    index.handler({'httpMethod': 'POST', 'path': '/fizz/buzz/jazz'})
-    mock_401.assert_called_once_with()
+@pytest.mark.parametrize('http_method,path,status_code', [
+    ('GET', '/fizz/buzz/jazz', 401),
+    ('POST', '/fizz/buzz', 403),
+])
+def test_handler_reject(http_method, path, status_code):
+    ret = index.handler({'httpMethod': http_method, 'path': path})
+    exp = index.reject(status_code)
+    assert ret == exp
 
 
 def test_reindex():
-    index.S3_PAGINATOR.paginate.return_value = iter([
-        {'CommonPrefixes': [{'Prefix': 'fizz/'}, {'Prefix': 'buzz/'}]},
-    ])
+    index.S3_PAGINATOR.paginate.return_value = iter(S3_REINDEX_RESPONSE)
     index.reindex({})
     index.S3.put_object.assert_called_once_with(
         Bucket=index.S3_BUCKET,

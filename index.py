@@ -117,11 +117,11 @@ def handler(event, *_):
 
         # 401 Unauthorized
         else:
-            res = unauthorized()
+            res = reject(401)
 
-    # 401 Unauthorized
+    # 403 Forbidden
     else:
-        res = unauthorized()
+        res = reject(403)
 
     # Return proxy response
     print(f'RESPONSE {json.dumps(res)}')
@@ -157,6 +157,6 @@ def reindex(event, *_):
     return res
 
 
-def unauthorized():
+def reject(status_code):
     """ Bad request. """
-    return {'statusCode': 401}
+    return {'statusCode': status_code}
