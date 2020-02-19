@@ -18,19 +18,7 @@ S3_PAGINATOR = S3.get_paginator('list_objects')
 S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL') or 900)
 
 
-def proxy_reponse(body):
-    """ Convert HTML to API Gateway response.
-
-        :param str body: HTML body
-        :return dict: API Gateway Lambda proxy response
-    """
-    # Wrap HTML in proxy response object
-    return {
-        'body': body,
-        'headers': {'Content-Type': 'text/html; charset=UTF-8'},
-        'statusCode': 200,
-    }
-
+# Lambda helpers
 
 def get_index():
     """ GET /simple/ """
@@ -38,20 +26,6 @@ def get_index():
     body = index['Body'].read().decode()
     res = proxy_reponse(body)
     return res
-
-
-def presign(key):
-    """ Presign package URLs.
-
-        :param str key: S3 key to presign
-    """
-    url = S3.generate_presigned_url(
-        'get_object',
-        ExpiresIn=S3_PRESIGNED_URL_TTL,
-        Params={'Bucket': S3_BUCKET, 'Key': key},
-        HttpMethod='GET',
-    )
-    return url
 
 
 def get_package_index(package):
@@ -86,6 +60,46 @@ def get_package_index(package):
     # Return Lambda prozy response
     return resp
 
+
+def presign(key):
+    """ Presign package URLs.
+
+        :param str key: S3 key to presign
+    """
+    url = S3.generate_presigned_url(
+        'get_object',
+        ExpiresIn=S3_PRESIGNED_URL_TTL,
+        Params={'Bucket': S3_BUCKET, 'Key': key},
+        HttpMethod='GET',
+    )
+    return url
+
+
+def proxy_reponse(body):
+    """ Convert HTML to API Gateway response.
+
+        :param str body: HTML body
+        :return dict: API Gateway Lambda proxy response
+    """
+    # Wrap HTML in proxy response object
+    return {
+        'body': body,
+        'headers': {'Content-Type': 'text/html; charset=UTF-8'},
+        'statusCode': 200,
+    }
+
+
+def redirect(path):
+    """ Redirect requests. """
+    return {'statusCode': 301, 'headers': {'Location': path}}
+
+
+def reject(status_code):
+    """ Bad request. """
+    return {'statusCode': status_code}
+
+
+# Lambda handlers
 
 def handler(event, *_):
     """ Handle API Gateway proxy request. """
@@ -128,11 +142,6 @@ def handler(event, *_):
     return res
 
 
-def redirect(path):
-    """ Redirect requests. """
-    return {'statusCode': 301, 'headers': {'Location': path}}
-
-
 def reindex(event, *_):
     """ Reindex root. """
     print(f'EVENT {json.dumps(event)}')
@@ -155,8 +164,3 @@ def reindex(event, *_):
     # Upload to S3 as index.html
     res = S3.put_object(Bucket=S3_BUCKET, Key='index.html', Body=body.encode())
     return res
-
-
-def reject(status_code):
-    """ Bad request. """
-    return {'statusCode': status_code}
