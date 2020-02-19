@@ -12,8 +12,6 @@ INDEX = string.Template(
     '<body><h1>$title</h1>$anchors</body></html>'
 )
 
-ROUTER = f'^{BASE_PATH}$|^{BASE_PATH}/([^/]+)$'
-
 S3 = boto3.client('s3')
 S3_BUCKET = os.getenv('S3_BUCKET')
 S3_PAGINATOR = S3.get_paginator('list_objects')
@@ -66,16 +64,17 @@ def get_package_index(name):
 
 def get_response(path):
     """ GET /{BASE_PATH}/* """
-
-    match = re.match(ROUTER, path)
-    name = match.group(1) if match else None
+    try:
+        name = re.match(f'^{BASE_PATH}/([^/]+)$', path).group(1)
+    except AttributeError:
+        name = None
 
     # GET /{BASE_PATH}/*
-    if match and name:
+    if name:
         return get_package_index(name)
 
     # GET /{BASE_PATH}
-    elif match:
+    elif BASE_PATH == path:
         return get_index()
 
     # GET /
