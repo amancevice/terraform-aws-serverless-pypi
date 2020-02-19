@@ -5,7 +5,7 @@ import string
 
 import boto3
 
-BASE_PATH = os.path.join('/', os.getenv('BASE_PATH') or '').strip('/')
+BASE_PATH = os.getenv('BASE_PATH', '').strip('/')
 ANCHOR = string.Template('<a href="$href">$name</a><br>')
 INDEX = string.Template(
     '<!DOCTYPE html><html><head><title>$title</title></head>'
@@ -15,13 +15,13 @@ INDEX = string.Template(
 S3 = boto3.client('s3')
 S3_BUCKET = os.getenv('S3_BUCKET')
 S3_PAGINATOR = S3.get_paginator('list_objects')
-S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL') or 900)
+S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 
 
 # Lambda helpers
 
 def get_index():
-    """ GET /simple/ """
+    """ GET /{BASE_PATH}/ """
     index = S3.get_object(Bucket=S3_BUCKET, Key='index.html')
     body = index['Body'].read().decode()
     res = proxy_reponse(body)
@@ -29,7 +29,7 @@ def get_index():
 
 
 def get_package_index(package):
-    """ Handle GET /simple/<pkg>/ requests. """
+    """ GET /{BASE_PATH}/<pkg>/ """
     # Get keys for given package
     pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Prefix=f'{package}/')
     keys = [
@@ -69,8 +69,8 @@ def presign(key):
     url = S3.generate_presigned_url(
         'get_object',
         ExpiresIn=S3_PRESIGNED_URL_TTL,
-        Params={'Bucket': S3_BUCKET, 'Key': key},
         HttpMethod='GET',
+        Params={'Bucket': S3_BUCKET, 'Key': key},
     )
     return url
 
