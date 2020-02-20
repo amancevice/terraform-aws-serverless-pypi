@@ -2,6 +2,8 @@ import json
 import os
 import string
 import sys
+from distutils.version import StrictVersion
+from xml.etree import ElementTree as xml
 
 import boto3
 
@@ -11,9 +13,31 @@ INDEX = string.Template(
     '<!DOCTYPE html><html><head><title>$title</title></head>'
     '<body><h1>$title</h1>$anchors</body></html>'
 )
+SEARCH = string.Template(
+    "<?xml version='1.0'?>"
+    '<methodResponse><params><param><value><array><data>'
+    '$data'
+    '</data></array></value></param></params></methodResponse>'
+)
+SEARCH_VALUE = string.Template(
+    '<struct>'
+    '<member><name>name</name><value><string>'
+    '$name'
+    '</string></value></member>'
+    '<member><name>summary</name><value><string>'
+    '$summary'
+    '</string></value></member>'
+    '<member><name>version</name><value><string>'
+    '$version'
+    '</string></value></member>'
+    '<member><name>_pypi_ordering</name><value><boolean>'
+    '0'
+    '</boolean></value></member>'
+    '</struct>'
+)
 
 S3 = boto3.client('s3')
-S3_BUCKET = os.getenv('S3_BUCKET')
+S3_BUCKET = os.getenv('S3_BUCKET', 'serverless-pypi')
 S3_PAGINATOR = S3.get_paginator('list_objects')
 S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 
@@ -79,7 +103,7 @@ def get_package_index(name):
     return resp
 
 
-def get_response(path):
+def get_response(path, *_):
     """ GET /{BASE_PATH}/*
 
         :param str path: Request path
@@ -101,7 +125,7 @@ def get_response(path):
     return reject(403, message='Forbidden')
 
 
-def head_response(path):
+def head_response(path, *_):
     """ HEAD /{BASE_PATH}/*
 
         :param str path: Request path
@@ -111,6 +135,19 @@ def head_response(path):
     res['body'] = ''
     res['headers']['Content-Size'] = 0
     return res
+
+
+def post_response(path, body):
+    """ POST /{BASE_PATH}/
+
+        :param str path: POST path
+        :param str body: POST body
+        :return dict: Response
+    """
+    if path == BASE_PATH:
+        return search(body)
+
+    return reject(403, message='Forbidden')
 
 
 def presign(key):
@@ -181,11 +218,41 @@ def reject(status_code, **kwargs):
     return res
 
 
+def search(request):
+    """ Search for pips.
+
+        :param str request: XML request string
+        :return str: XML response
+    """
+    tree = xml.fromstring(request)
+    term = tree.find('.//string').text  # TODO this is not ideal
+
+    hits = {}
+    for page in S3_PAGINATOR.paginate(Bucket=S3_BUCKET):
+        for obj in page.get('Contents'):
+            key = obj.get('Key')
+            if term in key and 'index.html' != key:
+                *_, name, tarball = key.split('/')
+                _, version = tarball.replace('.tar.gz', '').split(f'{name}-')
+                version = StrictVersion(version)
+                if name not in hits or hits[name]['version'] < version:
+                    hits[name] = {
+                        'name': name,
+                        'version': version,
+                        'summary': f's3://{S3_BUCKET}/{key}',
+                    }
+    data = [SEARCH_VALUE.safe_substitute(**x) for x in hits.values()]
+    body = SEARCH.safe_substitute(data=''.join(data))
+    resp = proxy_reponse(body, 'text/xml')
+    return resp
+
+
 # Lambda handlers
 
 ROUTES = {
     'GET': get_response,
     'HEAD': head_response,
+    'POST': post_response,
 }
 
 
@@ -197,10 +264,11 @@ def proxy_request(event, *_):
     # Get HTTP request method/path
     method = event.get('httpMethod')
     path = event.get('path').strip('/')
+    body = event.get('body')
 
     # Get HTTP response
     try:
-        res = ROUTES[method](path)
+        res = ROUTES[method](path, body)
     except KeyError:
         res = reject(403, message='Forbidden')
 
