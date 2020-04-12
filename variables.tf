@@ -15,7 +15,7 @@ variable api_base_path {
 
 variable api_deployment_stage_name {
   description = "API Gateway REST API deployment stage name"
-  default     = "prod"
+  default     = "simple"
 }
 
 variable api_deployment_variables {
