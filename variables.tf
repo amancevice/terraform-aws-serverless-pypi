@@ -13,6 +13,17 @@ variable api_base_path {
   default     = null
 }
 
+variable api_deployment_stage_name {
+  description = "API Gateway REST API deployment stage name"
+  default     = "prod"
+}
+
+variable api_deployment_variables {
+  description = "API Gateway REST API deployment stage name"
+  type        = map(string)
+  default     = {}
+}
+
 variable api_description {
   description = "API Gateway REST API description"
   default     = "PyPI service"
@@ -27,30 +38,30 @@ variable api_name {
   description = "API Gateway REST API name"
 }
 
-variable lambda_description_api {
+variable lambda_api_description {
   description = "REST API Lambda function description"
   default     = "PyPI service REST API"
 }
 
-variable lambda_description_reindex {
-  description = "Reindexer Lambda function decription"
-  default     = "Reindex PyPI root"
-}
-
-variable lambda_function_name_api {
+variable lambda_api_function_name {
   description = "REST API Lambda function name"
 }
 
-variable lambda_function_name_reindex {
-  description = "Reindexer Lambda function name"
-}
-
-variable lambda_memory_size_api {
+variable lambda_api_memory_size {
   description = "REST API Lambda function memory size"
   default     = 128
 }
 
-variable lambda_memory_size_reindex {
+variable lambda_reindex_description {
+  description = "Reindexer Lambda function decription"
+  default     = "Reindex PyPI root"
+}
+
+variable lambda_reindex_function_name {
+  description = "Reindexer Lambda function name"
+}
+
+variable lambda_reindex_memory_size {
   description = "Reindexer Lambda function memory size"
   default     = 128
 }

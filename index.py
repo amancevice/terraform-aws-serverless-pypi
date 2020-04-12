@@ -126,7 +126,7 @@ def reject(status_code):
 # Lambda handlers
 
 
-def handler(event, *_):
+def proxy_request(event, *_):
     """ Handle API Gateway proxy request. """
     print(f'EVENT {json.dumps(event)}')
     print(f'BASE_PATH {BASE_PATH!r}')
@@ -146,8 +146,8 @@ def handler(event, *_):
     return res
 
 
-def reindex(event, *_):
-    """ Reindex root. """
+def reindex_bucket(event, *_):
+    """ Reindex S3 bucket. """
     print(f'EVENT {json.dumps(event)}')
 
     # Get package names from common prefixes

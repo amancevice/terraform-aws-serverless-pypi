@@ -3,28 +3,34 @@ terraform {
 }
 
 locals {
+  lambda_runtime = "python3.8"
+
   api_authorization               = var.api_authorization
   api_authorizer_id               = var.api_authorizer_id
   api_base_path                   = var.api_base_path
   api_description                 = var.api_description
   api_endpoint_configuration_type = var.api_endpoint_configuration_type
   api_name                        = var.api_name
-  lambda_description_api          = var.lambda_description_api
-  lambda_description_reindex      = var.lambda_description_reindex
-  lambda_function_name_api        = var.lambda_function_name_api
-  lambda_function_name_reindex    = var.lambda_function_name_reindex
-  lambda_handler_api              = "index.handler"
-  lambda_handler_reindex          = "index.reindex"
-  lambda_memory_size_api          = var.lambda_memory_size_api
-  lambda_memory_size_reindex      = var.lambda_memory_size_reindex
-  lambda_runtime                  = "python3.8"
-  log_group_retention_in_days     = var.log_group_retention_in_days
-  policy_name                     = var.policy_name
-  role_description                = var.role_description
-  role_name                       = var.role_name
-  s3_bucket_name                  = var.s3_bucket_name
-  s3_presigned_url_ttl            = var.s3_presigned_url_ttl
-  tags                            = var.tags
+
+  api_deployment_stage_name = var.api_deployment_stage_name
+  api_deployment_variables  = var.api_deployment_variables
+
+  lambda_api_description   = var.lambda_api_description
+  lambda_api_function_name = var.lambda_api_function_name
+  lambda_api_memory_size   = var.lambda_api_memory_size
+
+  lambda_reindex_description   = var.lambda_reindex_description
+  lambda_reindex_function_name = var.lambda_reindex_function_name
+  lambda_reindex_memory_size   = var.lambda_reindex_memory_size
+
+  log_group_retention_in_days = var.log_group_retention_in_days
+
+  policy_name          = var.policy_name
+  role_description     = var.role_description
+  role_name            = var.role_name
+  s3_bucket_name       = var.s3_bucket_name
+  s3_presigned_url_ttl = var.s3_presigned_url_ttl
+  tags                 = var.tags
 }
 
 data archive_file package {
@@ -76,6 +82,21 @@ data aws_iam_policy_document api {
 
     resources = ["*"]
   }
+}
+
+resource aws_api_gateway_deployment deployment {
+  depends_on = [
+    aws_api_gateway_integration.proxy_get,
+    aws_api_gateway_integration.proxy_head,
+    aws_api_gateway_integration.proxy_post,
+    aws_api_gateway_integration.root_get,
+    aws_api_gateway_integration.root_head,
+    aws_api_gateway_integration.root_post,
+  ]
+
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  stage_name  = local.api_deployment_stage_name
+  variables   = local.api_deployment_variables
 }
 
 resource aws_api_gateway_integration proxy_get {
@@ -191,11 +212,11 @@ resource aws_iam_role_policy policy {
 }
 
 resource aws_lambda_function api {
-  description      = local.lambda_description_api
+  description      = local.lambda_api_description
   filename         = data.archive_file.package.output_path
-  function_name    = local.lambda_function_name_api
-  handler          = local.lambda_handler_api
-  memory_size      = local.lambda_memory_size_api
+  function_name    = local.lambda_api_function_name
+  handler          = "index.proxy_request"
+  memory_size      = local.lambda_api_memory_size
   role             = aws_iam_role.role.arn
   runtime          = local.lambda_runtime
   source_code_hash = data.archive_file.package.output_base64sha256
@@ -211,11 +232,11 @@ resource aws_lambda_function api {
 }
 
 resource aws_lambda_function reindex {
-  description      = local.lambda_description_reindex
+  description      = local.lambda_reindex_description
   filename         = data.archive_file.package.output_path
-  function_name    = local.lambda_function_name_reindex
-  handler          = local.lambda_handler_reindex
-  memory_size      = local.lambda_memory_size_reindex
+  function_name    = local.lambda_reindex_function_name
+  handler          = "index.reindex_bucket"
+  memory_size      = local.lambda_reindex_memory_size
   role             = aws_iam_role.role.arn
   runtime          = local.lambda_runtime
   source_code_hash = data.archive_file.package.output_base64sha256

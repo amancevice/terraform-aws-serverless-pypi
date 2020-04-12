@@ -84,7 +84,7 @@ def test_reject():
 
 def test_handler_get_root():
     event = {'httpMethod': 'GET', 'path': '/'}
-    ret = index.handler(event)
+    ret = index.proxy_request(event)
     exp = {
         'statusCode': 301,
         'headers': {
@@ -95,16 +95,16 @@ def test_handler_get_root():
 
 
 @mock.patch('index.get_index')
-def test_handler_get(mock_idx):
+def test_proxy_request_get(mock_idx):
     mock_idx.return_value = index.proxy_reponse(SIMPLE_INDEX)
-    index.handler({'httpMethod': 'GET', 'path': '/simple/'})
+    index.proxy_request({'httpMethod': 'GET', 'path': '/simple/'})
     mock_idx.assert_called_once_with()
 
 
 @mock.patch('index.get_package_index')
-def test_handler_get_package(mock_pkg):
+def test_proxy_request_get_package(mock_pkg):
     mock_pkg.return_value = index.proxy_reponse(PACKAGE_INDEX)
-    index.handler({'httpMethod': 'GET', 'path': '/simple/fizz/'})
+    index.proxy_request({'httpMethod': 'GET', 'path': '/simple/fizz/'})
     mock_pkg.assert_called_once_with('fizz')
 
 
@@ -112,15 +112,15 @@ def test_handler_get_package(mock_pkg):
     ('GET', '/fizz/buzz/jazz', 403),
     ('POST', '/fizz/buzz', 403),
 ])
-def test_handler_reject(http_method, path, status_code):
-    ret = index.handler({'httpMethod': http_method, 'path': path})
+def test_proxy_request_reject(http_method, path, status_code):
+    ret = index.proxy_request({'httpMethod': http_method, 'path': path})
     exp = index.reject(status_code)
     assert ret == exp
 
 
-def test_reindex():
+def test_reindex_bucket():
     index.S3_PAGINATOR.paginate.return_value = iter(S3_REINDEX_RESPONSE)
-    index.reindex({})
+    index.reindex_bucket({})
     index.S3.put_object.assert_called_once_with(
         Bucket=index.S3_BUCKET,
         Key='index.html',
