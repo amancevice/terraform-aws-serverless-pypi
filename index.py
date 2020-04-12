@@ -22,7 +22,10 @@ S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 
 
 def get_index():
-    """ GET /{BASE_PATH}/ """
+    """ GET /{BASE_PATH}/
+
+        :return dict: Response
+    """
     index = S3.get_object(Bucket=S3_BUCKET, Key='index.html')
     body = index['Body'].read().decode()
     res = proxy_reponse(body)
@@ -30,7 +33,11 @@ def get_index():
 
 
 def get_package_index(name):
-    """ GET /{BASE_PATH}/<pkg>/ """
+    """ GET /{BASE_PATH}/<pkg>/
+
+        :param str name: Package name
+        :return dict: Response
+    """
     # Get keys for given package
     pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Prefix=f'{name}/')
     keys = [
@@ -63,7 +70,11 @@ def get_package_index(name):
 
 
 def get_response(path):
-    """ GET /{BASE_PATH}/* """
+    """ GET /{BASE_PATH}/*
+
+        :param str path: Request path
+        :return sict: Response
+    """
     try:
         name = re.match(f'^{BASE_PATH}/([^/]+)$', path).group(1)
     except AttributeError:
@@ -89,6 +100,7 @@ def presign(key):
     """ Presign package URLs.
 
         :param str key: S3 key to presign
+        :return str: Presigned URL
     """
     url = S3.generate_presigned_url(
         'get_object',
@@ -99,27 +111,36 @@ def presign(key):
     return url
 
 
-def proxy_reponse(body):
+def proxy_reponse(body, content_type=None):
     """ Convert HTML to API Gateway response.
 
         :param str body: HTML body
         :return dict: API Gateway Lambda proxy response
     """
+    content_type = content_type or 'text/html'
     # Wrap HTML in proxy response object
     return {
         'body': body,
-        'headers': {'Content-Type': 'text/html; charset=UTF-8'},
+        'headers': {'Content-Type': f'{content_type}; charset=UTF-8'},
         'statusCode': 200,
     }
 
 
 def redirect(path):
-    """ Redirect requests. """
+    """ Redirect requests.
+
+        :param str path: Rejection status code
+        :return dict: Redirection response
+    """
     return {'statusCode': 301, 'headers': {'Location': path}}
 
 
 def reject(status_code):
-    """ Bad request. """
+    """ Bad request.
+
+        :param int status_code: Rejection status code
+        :return dict: Rejection response
+    """
     return {'statusCode': status_code}
 
 
