@@ -58,19 +58,13 @@ s3://your-bucket/
 
 ## Auth
 
-Please note that this tool provides **NO** authentication layer for your PyPI server. This is difficult to implement because `pip` is not very forgiving with any kind of auth pattern outside Basic Auth.
-
-### Private VPC Endpoint
-
-One solution to this is to deploy the API Gateway as a private endpoint inside a VPC. You can do this by setting `api_endpoint_configuation_type = "PRIVATE"`.
-
-You will need to set up a VPC endpoint for this to work, however. Be warned that creating a VPC endpoint for API Gateway can have unintended consequences if you are not prepared. I've broken things by doing this.
+Please note that this tool provides **NO** authentication layer for your PyPI server out of the box. This is difficult to implement because `pip` is currently not very forgiving with any kind of auth pattern outside Basic Auth.
 
 ### Cognito Basic Auth
 
-I have also provided a very simple authentication implementation using AWS Cognito and API Gateway authorizers.
+I have provided a very simple authentication implementation using AWS Cognito and API Gateway authorizers.
 
-Add a Cognito-backed Basic authentication layer to your serverless PyPI with the `serverless-pypi-basic-auth` module:
+Add a Cognito-backed Basic authentication layer to your serverless PyPI with the `serverless-pypi-cognito` module:
 
 ```hcl
 module serverless_pypi_cognito {
@@ -88,7 +82,6 @@ You will also need to update your serverless PyPI module with the authorizer ID 
 ```hcl
 module serverless_pypi {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 0.2"
 
   # ...
   api_authorization = "CUSTOM"
@@ -96,3 +89,7 @@ module serverless_pypi {
   # ...
 }
 ```
+
+### Private VPC Endpoint
+
+Another solution to this is to deploy the API Gateway as a private endpoint inside a VPC. You will need to set up a VPC endpoint for this to work, however. Be warned that creating a VPC endpoint for API Gateway can have unintended consequences if you are not prepared. I've broken things by doing this.
