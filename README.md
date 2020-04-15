@@ -21,7 +21,7 @@ Package uploads/removals on S3 will trigger a Lambda function that reindexes the
 ```hcl
 module serverless_pypi {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 0.2"
+  version = "~> 1.0"
 
   # ...
   api_name                       = "serverless-pypi.example.com"
