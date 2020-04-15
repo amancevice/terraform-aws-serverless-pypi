@@ -6,7 +6,6 @@ import pytest
 with mock.patch('boto3.client'):
     import index
     index.BASE_PATH = 'simple'
-    index.FALLBACK_INDEX_URL = 'https://pypi.org/simple/'
 
 SIMPLE_INDEX = (
     '<!DOCTYPE html><html><head><title>Simple index</title></head>'
@@ -72,12 +71,21 @@ def test_get_package_index():
 
 
 def test_get_package_index_fallback():
+    index.FALLBACK_INDEX_URL = 'https://pypi.org/simple/'
     index.S3_PAGINATOR.paginate.return_value = iter([])
     ret = index.get_package_index('buzz')
     exp = {
         'headers': {'Location': 'https://pypi.org/simple/buzz/'},
         'statusCode': 301,
     }
+    assert ret == exp
+
+
+def test_get_package_index_not_found():
+    index.FALLBACK_INDEX_URL = ''
+    index.S3_PAGINATOR.paginate.return_value = iter([])
+    ret = index.get_package_index('buzz')
+    exp = {'statusCode': 404}
     assert ret == exp
 
 

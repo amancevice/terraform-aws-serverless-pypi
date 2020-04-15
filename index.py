@@ -52,6 +52,10 @@ def get_package_index(name):
         fallback_url = os.path.join(FALLBACK_INDEX_URL, name, '')
         return redirect(fallback_url)
 
+    # Respond with 404 if no keys and no fallback index
+    elif not any(keys):
+        return reject(404)
+
     # Convert keys to presigned URLs
     hrefs = [presign(key) for key in keys]
 
