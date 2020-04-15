@@ -164,7 +164,8 @@ def proxy_request(event, *_):
         res = reject(403)
 
     # Return proxy response
-    print(f'RESPONSE {json.dumps(res)}')
+    status = res['statusCode']
+    print(f'RESPONSE [{status}] {json.dumps(res)}')
     return res
 
 
