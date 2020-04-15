@@ -88,7 +88,7 @@ def test_handler_get_root():
     exp = {
         'statusCode': 301,
         'headers': {
-            'Location': '/simple',
+            'Location': '/simple/',
         },
     }
     assert ret == exp

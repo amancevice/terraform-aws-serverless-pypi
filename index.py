@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import string
 import sys
 
@@ -76,22 +75,17 @@ def get_response(path):
         :param str path: Request path
         :return sict: Response
     """
-    try:
-        name = re.match(f'^{BASE_PATH}/([^/]+)$', path).group(1)
-    except AttributeError:
-        name = None
+    # GET /
+    if not path:
+        return redirect(f'/{BASE_PATH}/')
 
-    # GET /{BASE_PATH}/*
-    if name:
-        return get_package_index(name)
-
-    # GET /{BASE_PATH}
-    elif BASE_PATH == path:
+    # GET /{BASE_PATH}/
+    if path == BASE_PATH:
         return get_index()
 
-    # GET /
-    elif '' == path:
-        return redirect(f'/{BASE_PATH}')
+    # GET /{BASE_PATH}/*
+    elif path.startswith(BASE_PATH):
+        return get_package_index(os.path.basename(path))
 
     # 403 Forbidden
     return reject(403)
