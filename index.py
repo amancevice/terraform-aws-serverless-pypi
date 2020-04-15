@@ -2,6 +2,7 @@ import json
 import os
 import re
 import string
+import sys
 
 import boto3
 
@@ -189,3 +190,13 @@ def reindex_bucket(event, *_):
     # Upload to S3 as index.html
     res = S3.put_object(Bucket=S3_BUCKET, Key='index.html', Body=body.encode())
     return res
+
+
+if __name__ == '__main__':  # pragma: no cover
+    try:
+        path = sys.argv[1]
+        event = {'path': path, 'httpMethod': 'GET'}
+    except IndexError:
+        this = os.path.basename(__file__)
+        raise SystemExit(f"usage: python {this} <url-path>")
+    proxy_request(event)
