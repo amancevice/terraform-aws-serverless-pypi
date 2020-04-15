@@ -38,6 +38,11 @@ variable api_name {
   description = "API Gateway REST API name"
 }
 
+variable fallback_index_url {
+  description = "Optional fallback PyPI index URL"
+  default     = null
+}
+
 variable lambda_api_description {
   description = "REST API Lambda function description"
   default     = "PyPI service REST API"

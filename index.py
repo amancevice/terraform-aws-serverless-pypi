@@ -17,6 +17,7 @@ S3_BUCKET = os.getenv('S3_BUCKET')
 S3_PAGINATOR = S3.get_paginator('list_objects')
 S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 
+FALLBACK_INDEX_URL = os.getenv('FALLBACK_INDEX_URL')
 
 # Lambda helpers
 
@@ -45,6 +46,11 @@ def get_package_index(name):
         for page in pages
         for key in page.get('Contents') or []
     ]
+
+    # Go to fallback index if no keys
+    if FALLBACK_INDEX_URL and not any(keys):
+        fallback_url = os.path.join(FALLBACK_INDEX_URL, name, '')
+        return redirect(fallback_url)
 
     # Convert keys to presigned URLs
     hrefs = [presign(key) for key in keys]

@@ -25,6 +25,7 @@ locals {
 
   log_group_retention_in_days = var.log_group_retention_in_days
 
+  fallback_index_url   = var.fallback_index_url
   policy_name          = var.policy_name
   role_description     = var.role_description
   role_name            = var.role_name
@@ -260,9 +261,10 @@ resource aws_lambda_function api {
 
   environment {
     variables = {
+      BASE_PATH            = local.api_base_path
+      FALLBACK_INDEX_URL   = local.fallback_index_url
       S3_BUCKET            = aws_s3_bucket.pypi.bucket
       S3_PRESIGNED_URL_TTL = local.s3_presigned_url_ttl
-      BASE_PATH            = local.api_base_path
     }
   }
 }
