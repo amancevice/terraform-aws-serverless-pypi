@@ -56,6 +56,28 @@ s3://your-bucket/
     └── my-other-package-2.3.4.tar.gz
 ```
 
+## Fallback PyPI Index
+
+You can configure your PyPI index to fall back to a different PyPI in the event that a package is not found in your bucket.
+
+Without configuring a fallback index URL the following `pip install` command might fail (assuming you don't have `boto3` and all its dependencies in your S3 bucket):
+
+```bash
+pip install boto3 --index-url https://my.private.pypi/simple/
+```
+
+If instead, you configure a fallback index URL in the terraform module, then requesting a pip that isn't found in the bucket will be re-routed to the fallback.
+
+```hcl
+module serverless_pypi {
+  source  = "amancevice/serverless-pypi/aws"
+
+  # ...
+  fallback_index_url = "https://pypi.org/simple/"
+  # ...
+}
+```
+
 ## Auth
 
 Please note that this tool provides **NO** authentication layer for your PyPI server out of the box. This is difficult to implement because `pip` is currently not very forgiving with any kind of auth pattern outside Basic Auth.
