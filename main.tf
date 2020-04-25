@@ -315,6 +315,7 @@ resource aws_s3_bucket_notification reindex {
   lambda_function {
     lambda_function_arn = aws_lambda_function.reindex.arn
     filter_suffix       = ".tar.gz"
+    id                  = "InvokeReindexer"
 
     events = [
       "s3:ObjectCreated:*",

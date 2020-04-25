@@ -59,7 +59,7 @@ variable lambda_api_memory_size {
 
 variable lambda_reindex_description {
   description = "Reindexer Lambda function decription"
-  default     = "Reindex PyPI root"
+  default     = "PyPI service reindexer"
 }
 
 variable lambda_reindex_function_name {
