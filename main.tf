@@ -8,30 +8,25 @@ locals {
   api_authorization               = var.api_authorization
   api_authorizer_id               = var.api_authorizer_id
   api_base_path                   = var.api_base_path
+  api_deployment_stage_name       = var.api_deployment_stage_name
+  api_deployment_variables        = var.api_deployment_variables
   api_description                 = var.api_description
   api_endpoint_configuration_type = var.api_endpoint_configuration_type
   api_name                        = var.api_name
-
-  api_deployment_stage_name = var.api_deployment_stage_name
-  api_deployment_variables  = var.api_deployment_variables
-
-  lambda_api_description   = var.lambda_api_description
-  lambda_api_function_name = var.lambda_api_function_name
-  lambda_api_memory_size   = var.lambda_api_memory_size
-
-  lambda_reindex_description   = var.lambda_reindex_description
-  lambda_reindex_function_name = var.lambda_reindex_function_name
-  lambda_reindex_memory_size   = var.lambda_reindex_memory_size
-
-  log_group_retention_in_days = var.log_group_retention_in_days
-
-  fallback_index_url   = var.fallback_index_url
-  policy_name          = var.policy_name
-  role_description     = var.role_description
-  role_name            = var.role_name
-  s3_bucket_name       = var.s3_bucket_name
-  s3_presigned_url_ttl = var.s3_presigned_url_ttl
-  tags                 = var.tags
+  fallback_index_url              = var.fallback_index_url
+  lambda_api_description          = var.lambda_api_description
+  lambda_api_function_name        = var.lambda_api_function_name
+  lambda_api_memory_size          = var.lambda_api_memory_size
+  lambda_reindex_description      = var.lambda_reindex_description
+  lambda_reindex_function_name    = var.lambda_reindex_function_name
+  lambda_reindex_memory_size      = var.lambda_reindex_memory_size
+  log_group_retention_in_days     = var.log_group_retention_in_days
+  policy_name                     = var.policy_name
+  role_description                = var.role_description
+  role_name                       = var.role_name
+  s3_bucket_name                  = var.s3_bucket_name
+  s3_presigned_url_ttl            = var.s3_presigned_url_ttl
+  tags                            = var.tags
 }
 
 data archive_file package {
