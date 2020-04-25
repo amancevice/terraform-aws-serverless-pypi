@@ -26,8 +26,8 @@ module serverless_pypi {
   # ...
   api_name                       = "serverless-pypi.example.com"
   api_endpoint_configuation_type = "REGIONAL | EDGE | PRIVATE"
-  lambda_function_name_api       = "serverless-pypi-api"
-  lambda_function_name_reindex   = "serverless-pypi-reindex"
+  lambda_api_function_name       = "serverless-pypi-api"
+  lambda_reindex_function_name   = "serverless-pypi-reindex"
   role_name                      = "serverless-pypi-role"
   s3_bucket_name                 = "serverless-pypi.example.com"
   s3_presigned_url_ttl           = 900
