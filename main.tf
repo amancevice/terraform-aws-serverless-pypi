@@ -291,6 +291,7 @@ resource aws_lambda_permission invoke_api {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.api.arn
   principal     = "apigateway.amazonaws.com"
+  statement_id  = "InvokeAPI"
   source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*/*"
 }
 
@@ -298,6 +299,7 @@ resource aws_lambda_permission invoke_reindex {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.reindex.arn
   principal     = "s3.amazonaws.com"
+  statement_id  = "InvokeReindexer"
   source_arn    = aws_s3_bucket.pypi.arn
 }
 
@@ -312,8 +314,12 @@ resource aws_s3_bucket_notification reindex {
 
   lambda_function {
     lambda_function_arn = aws_lambda_function.reindex.arn
-    events              = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
     filter_suffix       = ".tar.gz"
+
+    events = [
+      "s3:ObjectCreated:*",
+      "s3:ObjectRemoved:*",
+    ]
   }
 }
 
