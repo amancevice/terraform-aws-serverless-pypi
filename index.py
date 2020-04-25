@@ -83,7 +83,7 @@ def get_response(path):
     """ GET /{BASE_PATH}/*
 
         :param str path: Request path
-        :return sict: Response
+        :return dict: Response
     """
     # GET /
     if not path:
