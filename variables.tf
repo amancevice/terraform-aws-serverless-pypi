@@ -57,6 +57,17 @@ variable lambda_api_memory_size {
   default     = 128
 }
 
+variable lambda_api_publish {
+  description = "REST API Lambda function publish trigger"
+  type        = bool
+  default     = false
+}
+
+variable lambda_api_qualifier {
+  description = "REST API Lambda function qualifier"
+  default     = null
+}
+
 variable lambda_reindex_description {
   description = "Reindexer Lambda function decription"
   default     = "PyPI service reindexer"
@@ -69,6 +80,17 @@ variable lambda_reindex_function_name {
 variable lambda_reindex_memory_size {
   description = "Reindexer Lambda function memory size"
   default     = 128
+}
+
+variable lambda_reindex_publish {
+  description = "Reindexer Lambda function publish true/false"
+  type        = bool
+  default     = false
+}
+
+variable lambda_reindex_qualifier {
+  description = "Reindexer Lambda function qualifier"
+  default     = null
 }
 
 variable log_group_retention_in_days {

@@ -17,9 +17,13 @@ locals {
   lambda_api_description          = var.lambda_api_description
   lambda_api_function_name        = var.lambda_api_function_name
   lambda_api_memory_size          = var.lambda_api_memory_size
+  lambda_api_publish              = var.lambda_api_publish
+  lambda_api_qualifier            = var.lambda_api_qualifier
   lambda_reindex_description      = var.lambda_reindex_description
   lambda_reindex_function_name    = var.lambda_reindex_function_name
   lambda_reindex_memory_size      = var.lambda_reindex_memory_size
+  lambda_reindex_publish          = var.lambda_reindex_publish
+  lambda_reindex_qualifier        = var.lambda_reindex_qualifier
   log_group_retention_in_days     = var.log_group_retention_in_days
   policy_name                     = var.policy_name
   role_description                = var.role_description
@@ -27,6 +31,9 @@ locals {
   s3_bucket_name                  = var.s3_bucket_name
   s3_presigned_url_ttl            = var.s3_presigned_url_ttl
   tags                            = var.tags
+
+  lambda_api_arn     = local.lambda_api_qualifier == null ? aws_lambda_function.api.arn : "${aws_lambda_function.api.arn}:${local.lambda_api_qualifier}"
+  lambda_reindex_arn = local.lambda_reindex_qualifier == null ? aws_lambda_function.reindex.arn : "${aws_lambda_function.reindex.arn}:${local.lambda_reindex_qualifier}"
 }
 
 data archive_file package {
@@ -249,6 +256,7 @@ resource aws_lambda_function api {
   function_name    = local.lambda_api_function_name
   handler          = "index.proxy_request"
   memory_size      = local.lambda_api_memory_size
+  publish          = local.lambda_api_publish
   role             = aws_iam_role.role.arn
   runtime          = local.lambda_runtime
   source_code_hash = data.archive_file.package.output_base64sha256
@@ -270,6 +278,7 @@ resource aws_lambda_function reindex {
   function_name    = local.lambda_reindex_function_name
   handler          = "index.reindex_bucket"
   memory_size      = local.lambda_reindex_memory_size
+  publish          = local.lambda_reindex_publish
   role             = aws_iam_role.role.arn
   runtime          = local.lambda_runtime
   source_code_hash = data.archive_file.package.output_base64sha256
@@ -284,7 +293,7 @@ resource aws_lambda_function reindex {
 
 resource aws_lambda_permission invoke_api {
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.arn
+  function_name = local.lambda_api_arn
   principal     = "apigateway.amazonaws.com"
   statement_id  = "InvokeAPI"
   source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*/*"
@@ -292,7 +301,7 @@ resource aws_lambda_permission invoke_api {
 
 resource aws_lambda_permission invoke_reindex {
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.reindex.arn
+  function_name = local.lambda_reindex_arn
   principal     = "s3.amazonaws.com"
   statement_id  = "InvokeReindexer"
   source_arn    = aws_s3_bucket.pypi.arn
@@ -308,7 +317,7 @@ resource aws_s3_bucket_notification reindex {
   bucket = aws_s3_bucket.pypi.id
 
   lambda_function {
-    lambda_function_arn = aws_lambda_function.reindex.arn
+    lambda_function_arn = local.lambda_reindex_arn
     filter_suffix       = ".tar.gz"
     id                  = "InvokeReindexer"
 
