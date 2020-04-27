@@ -11,4 +11,5 @@
 *.coverage
 *.env
 *.zip
+__pycache__/
 coverage.xml
