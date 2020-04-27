@@ -86,7 +86,7 @@ def get_response(path):
         :return dict: Response
     """
     # GET /
-    if not path:
+    if not path and BASE_PATH:
         return redirect(f'/{BASE_PATH}/')
 
     # GET /{BASE_PATH}/
