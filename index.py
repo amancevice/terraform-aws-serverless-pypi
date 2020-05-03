@@ -54,7 +54,7 @@ def get_package_index(name):
 
     # Respond with 404 if no keys and no fallback index
     elif not any(keys):
-        return reject(404)
+        return reject(404, message='Not found')
 
     # Convert keys to presigned URLs
     hrefs = [presign(key) for key in keys]
@@ -98,7 +98,19 @@ def get_response(path):
         return get_package_index(os.path.basename(path))
 
     # 403 Forbidden
-    return reject(403)
+    return reject(403, message='Forbidden')
+
+
+def head_response(path):
+    """ HEAD /{BASE_PATH}/*
+
+        :param str path: Request path
+        :return dict: Response
+    """
+    res = get_response(path)
+    res['body'] = ''
+    res['headers']['Content-Size'] = 0
+    return res
 
 
 def presign(key):
@@ -124,11 +136,15 @@ def proxy_reponse(body, content_type=None):
     """
     content_type = content_type or 'text/html'
     # Wrap HTML in proxy response object
-    return {
+    res = {
         'body': body,
-        'headers': {'Content-Type': f'{content_type}; charset=UTF-8'},
         'statusCode': 200,
+        'headers': {
+            'Content-Size': len(body),
+            'Content-Type': f'{content_type}; charset=UTF-8',
+        },
     }
+    return res
 
 
 def redirect(path):
@@ -137,19 +153,40 @@ def redirect(path):
         :param str path: Rejection status code
         :return dict: Redirection response
     """
-    return {'statusCode': 301, 'headers': {'Location': path}}
+    res = {
+        'statusCode': 301,
+        'headers': {
+            'Location': path,
+        },
+    }
+    return res
 
 
-def reject(status_code):
+def reject(status_code, **kwargs):
     """ Bad request.
 
         :param int status_code: Rejection status code
+        :param dict kwargs: Rejection body JSON
         :return dict: Rejection response
     """
-    return {'statusCode': status_code}
+    body = json.dumps(kwargs)
+    res = {
+        'body': body,
+        'statusCode': status_code,
+        'headers': {
+            'Content-Size': len(body),
+            'Content-Type': 'application/json; charset=UTF-8',
+        }
+    }
+    return res
 
 
 # Lambda handlers
+
+ROUTES = {
+    'GET': get_response,
+    'HEAD': head_response,
+}
 
 
 def proxy_request(event, *_):
@@ -162,10 +199,10 @@ def proxy_request(event, *_):
     path = event.get('path').strip('/')
 
     # Get HTTP response
-    if method in ['GET', 'HEAD']:
-        res = get_response(path)
-    else:
-        res = reject(403)
+    try:
+        res = ROUTES[method](path)
+    except KeyError:
+        res = reject(403, message='Forbidden')
 
     # Return proxy response
     status = res['statusCode']

@@ -1,4 +1,5 @@
 import io
+import json
 from unittest import mock
 
 import pytest
@@ -36,11 +37,15 @@ S3_INDEX_RESPONSE = [
 
 
 def test_proxy_reponse():
+    body = 'FIZZ'
     ret = index.proxy_reponse('FIZZ')
     exp = {
-        'body': 'FIZZ',
-        'headers': {'Content-Type': 'text/html; charset=UTF-8'},
+        'body': body,
         'statusCode': 200,
+        'headers': {
+            'Content-Size': len(body),
+            'Content-Type': 'text/html; charset=UTF-8',
+        },
     }
     assert ret == exp
 
@@ -52,8 +57,11 @@ def test_get_index():
     ret = index.get_index()
     exp = {
         'body': SIMPLE_INDEX,
-        'headers': {'Content-Type': 'text/html; charset=UTF-8'},
         'statusCode': 200,
+        'headers': {
+            'Content-Size': len(SIMPLE_INDEX),
+            'Content-Type': 'text/html; charset=UTF-8',
+        },
     }
     assert ret == exp
 
@@ -64,8 +72,11 @@ def test_get_package_index():
     ret = index.get_package_index('fizz')
     exp = {
         'body': PACKAGE_INDEX,
-        'headers': {'Content-Type': 'text/html; charset=UTF-8'},
         'statusCode': 200,
+        'headers': {
+            'Content-Size': len(PACKAGE_INDEX),
+            'Content-Type': 'text/html; charset=UTF-8',
+        },
     }
     assert ret == exp
 
@@ -75,8 +86,10 @@ def test_get_package_index_fallback():
     index.S3_PAGINATOR.paginate.return_value = iter([])
     ret = index.get_package_index('buzz')
     exp = {
-        'headers': {'Location': 'https://pypi.org/simple/buzz/'},
         'statusCode': 301,
+        'headers': {
+            'Location': 'https://pypi.org/simple/buzz/',
+        },
     }
     assert ret == exp
 
@@ -84,8 +97,16 @@ def test_get_package_index_fallback():
 def test_get_package_index_not_found():
     index.FALLBACK_INDEX_URL = ''
     index.S3_PAGINATOR.paginate.return_value = iter([])
+    body = json.dumps({'message': 'Not found'})
     ret = index.get_package_index('buzz')
-    exp = {'statusCode': 404}
+    exp = {
+        'body': body,
+        'statusCode': 404,
+        'headers': {
+            'Content-Size': len(body),
+            'Content-Type': 'application/json; charset=UTF-8',
+        },
+    }
     assert ret == exp
 
 
@@ -96,8 +117,16 @@ def test_redirect():
 
 
 def test_reject():
-    ret = index.reject(401)
-    exp = {'statusCode': 401}
+    body = json.dumps({'message': 'Unauthorized'})
+    ret = index.reject(401, message='Unauthorized')
+    exp = {
+        'body': body,
+        'statusCode': 401,
+        'headers': {
+            'Content-Size': len(body),
+            'Content-Type': 'application/json; charset=UTF-8',
+        },
+    }
     assert ret == exp
 
 
@@ -128,12 +157,16 @@ def test_proxy_request_get_package(mock_pkg):
 
 
 @pytest.mark.parametrize('http_method,path,status_code', [
+    ('HEAD', '/fizz/buzz/jazz', 403),
     ('GET', '/fizz/buzz/jazz', 403),
     ('POST', '/fizz/buzz', 403),
 ])
 def test_proxy_request_reject(http_method, path, status_code):
     ret = index.proxy_request({'httpMethod': http_method, 'path': path})
-    exp = index.reject(status_code)
+    exp = index.reject(status_code, message='Forbidden')
+    if http_method == 'HEAD':
+        exp['body'] = ''
+        exp['headers']['Content-Size'] = 0
     assert ret == exp
 
 
