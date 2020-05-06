@@ -1,5 +1,6 @@
 import io
 import json
+import textwrap
 from unittest import mock
 
 import pytest
@@ -149,6 +150,17 @@ def test_proxy_request_get(mock_idx):
     mock_idx.assert_called_once_with()
 
 
+@mock.patch('index.search')
+def test_proxy_reponse_post(mock_search):
+    mock_search.return_value = index.proxy_reponse('{}')
+    index.proxy_request({
+        'body': '<SEARCH_XML>',
+        'httpMethod': 'POST',
+        'path': '/simple/',
+    })
+    mock_search.assert_called_once_with('<SEARCH_XML>')
+
+
 @mock.patch('index.get_package_index')
 def test_proxy_request_get_package(mock_pkg):
     mock_pkg.return_value = index.proxy_reponse(PACKAGE_INDEX)
@@ -159,7 +171,8 @@ def test_proxy_request_get_package(mock_pkg):
 @pytest.mark.parametrize('http_method,path,status_code', [
     ('HEAD', '/fizz/buzz/jazz', 403),
     ('GET', '/fizz/buzz/jazz', 403),
-    ('POST', '/fizz/buzz', 403),
+    ('POST', '/fizz/buzz/jazz', 403),
+    ('OPTIONS', '/fizz/buzz/jazz', 403),
 ])
 def test_proxy_request_reject(http_method, path, status_code):
     ret = index.proxy_request({'httpMethod': http_method, 'path': path})
@@ -178,3 +191,56 @@ def test_reindex_bucket():
         Key='index.html',
         Body=SIMPLE_INDEX.encode(),
     )
+
+
+@pytest.mark.parametrize('pip', ['fizz'])
+def test_search(pip):
+    index.S3_PAGINATOR.paginate.return_value = iter(S3_INDEX_RESPONSE)
+    request = textwrap.dedent(f'''\
+        <?xml version='1.0'?>
+        <methodCall>
+        <methodName>search</methodName>
+        <params>
+        <param>
+        <value><struct>
+        <member>
+        <name>name</name>
+        <value><array><data>
+        <value><string>{pip}</string></value>
+        </data></array></value>
+        </member>
+        <member>
+        <name>summary</name>
+        <value><array><data>
+        <value><string>{pip}</string></value>
+        </data></array></value>
+        </member>
+        </struct></value>
+        </param>
+        <param>
+        <value><string>or</string></value>
+        </param>
+        </params>
+        </methodCall>\
+    ''')
+    body = (
+        "<?xml version='1.0'?><methodResponse><params><param><value><array>"
+        "<data><struct><member><name>name</name><value><string>fizz</string>"
+        "</value></member><member><name>summary</name><value>"
+        "<string>s3://serverless-pypi/simple/fizz/fizz-1.2.3.tar.gz</string>"
+        "</value></member><member><name>version</name><value>"
+        "<string>1.2.3</string></value></member><member>"
+        "<name>_pypi_ordering</name><value><boolean>0</boolean></value>"
+        "</member></struct></data></array></value></param></params>"
+        "</methodResponse>"
+    )
+    ret = index.search(request)
+    exp = {
+        'body': body,
+        'statusCode': 200,
+        'headers': {
+            'Content-Size': len(body),
+            'Content-Type': 'text/xml; charset=UTF-8',
+        },
+    }
+    assert ret == exp
