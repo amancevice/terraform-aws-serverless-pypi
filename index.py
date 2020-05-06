@@ -169,7 +169,7 @@ def reject(status_code, **kwargs):
         :param dict kwargs: Rejection body JSON
         :return dict: Rejection response
     """
-    body = json.dumps(kwargs)
+    body = json.dumps(kwargs) if kwargs else ''
     res = {
         'body': body,
         'statusCode': status_code,
