@@ -1,8 +1,9 @@
 # Serverless PyPI
 
-[![py.test](https://github.com/amancevice/terraform-aws-serverless-pypi/workflows/py.test/badge.svg)](https://github.com/amancevice/terraform-aws-serverless-pypi/actions)
-[![Maintainability](https://api.codeclimate.com/v1/badges/7198bd49152ff23fbe93/maintainability)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/7198bd49152ff23fbe93/test_coverage)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/test_coverage)
+[![terraform](https://img.shields.io/github/v/tag/amancevice/terraform-aws-serverless-pypi?color=62f&label=version&logo=terraform&style=flat-square)](https://registry.terraform.io/modules/amancevice/serverless-pypi/aws)
+[![py.test](https://img.shields.io/github/workflow/status/amancevice/terraform-aws-serverless-pypi/py.test?logo=github&style=flat-square)](https://github.com/amancevice/terraform-aws-serverless-pypi/actions)
+[![maintainability](https://img.shields.io/codeclimate/maintainability/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/maintainability)
+[![coverage](https://img.shields.io/codeclimate/coverage/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/test_coverage)
 
 S3-backed serverless PyPI.
 
@@ -21,7 +22,7 @@ Package uploads/removals on S3 will trigger a Lambda function that reindexes the
 ```hcl
 module serverless_pypi {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 1.0"
+  version = "~> 1.2"
 
   # ...
   api_name                       = "serverless-pypi.example.com"
