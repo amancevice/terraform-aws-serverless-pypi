@@ -2,8 +2,8 @@
 
 [![terraform](https://img.shields.io/github/v/tag/amancevice/terraform-aws-serverless-pypi?color=62f&label=version&logo=terraform&style=flat-square)](https://registry.terraform.io/modules/amancevice/serverless-pypi/aws)
 [![py.test](https://img.shields.io/github/workflow/status/amancevice/terraform-aws-serverless-pypi/py.test?logo=github&style=flat-square)](https://github.com/amancevice/terraform-aws-serverless-pypi/actions)
-[![maintainability](https://img.shields.io/codeclimate/maintainability/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/maintainability)
 [![coverage](https://img.shields.io/codeclimate/coverage/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/test_coverage)
+[![maintainability](https://img.shields.io/codeclimate/maintainability/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/maintainability)
 
 S3-backed serverless PyPI.
 
