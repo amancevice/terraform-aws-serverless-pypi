@@ -4,20 +4,13 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-python@v1
-    - name: Set up code climate
-      uses: amancevice/code-climate-action@v0
-      env:
-        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
-      with:
-        command: before-build
-    - run: pip install boto3 flake8 pytest pytest-cov
-    - run: flake8
-    - run: py.test
-    - name: Send coverage report
-      uses: amancevice/code-climate-action@v0
-      env:
-        CC_TEST_REPORTER_ID: ${{ secrets.CC_TEST_REPORTER_ID }}
-      with:
-        command: after-build
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v1
+      - uses: amancevice/setup-code-climate@v0
+        with:
+          cc_test_reporter_id: ${{ secrets.CC_TEST_REPORTER_ID }}
+      - run: cc-test-reporter before-build
+      - run: pip install boto3 flake8 pytest pytest-cov
+      - run: flake8
+      - run: pytest
+      - run: cc-test-reporter after-build
