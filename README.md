@@ -26,7 +26,7 @@ module serverless_pypi {
 
   # ...
   api_name                       = "serverless-pypi.example.com"
-  api_endpoint_configuation_type = "REGIONAL | EDGE | PRIVATE"
+  api_endpoint_configuration_type = "REGIONAL | EDGE | PRIVATE"
   lambda_api_function_name       = "serverless-pypi-api"
   lambda_reindex_function_name   = "serverless-pypi-reindex"
   role_name                      = "serverless-pypi-role"
