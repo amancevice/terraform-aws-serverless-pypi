@@ -15,7 +15,7 @@ Requests to the package index (eg, `/simple/fizz/`) will dynamically generate an
 
 Package uploads/removals on S3 will trigger a Lambda function that reindexes the bucket and generates a new `index.html`. This is done to save time when querying the base path when your bucket contains a multitude of packages.
 
-[![Serverless PyPI](https://github.com/amancevice/terraform-aws-serverless-pypi/blob/master/serverless-pypi.png?raw=true)](https://github.com/amancevice/terraform-aws-serverless-pypi)
+[![Serverless PyPI](https://github.com/amancevice/terraform-aws-serverless-pypi/blob/main/serverless-pypi.png?raw=true)](https://github.com/amancevice/terraform-aws-serverless-pypi)
 
 ## Usage
 
