@@ -18,3 +18,4 @@ jobs:
       - run: flake8
       - run: pytest
       - run: cc-test-reporter after-build
+        if: ${{ github.event_name != 'pull_request' }}
