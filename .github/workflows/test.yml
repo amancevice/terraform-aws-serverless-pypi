@@ -1,4 +1,4 @@
-name: py.test
+name: test
 on:
   pull_request:
   push:
@@ -19,3 +19,13 @@ jobs:
       - run: pytest
       - run: cc-test-reporter after-build
         if: ${{ github.event_name != 'pull_request' }}
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: hashicorp/setup-terraform@v1
+      - run: terraform fmt -check
+      - run: terraform init
+      - run: terraform validate
+        env:
+          AWS_DEFAULT_REGION: us-east-1
