@@ -43,8 +43,8 @@ S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 
 FALLBACK_INDEX_URL = os.getenv('FALLBACK_INDEX_URL')
 
-# Lambda helpers
 
+# Lambda helpers
 
 def get_index():
     """
@@ -54,8 +54,7 @@ def get_index():
     """
     index = S3.get_object(Bucket=S3_BUCKET, Key='index.html')
     body = index['Body'].read().decode()
-    res = proxy_reponse(body)
-    return res
+    return proxy_reponse(body)
 
 
 def get_package_index(name):
@@ -99,10 +98,7 @@ def get_package_index(name):
     )
 
     # Convert to Lambda proxy response
-    resp = proxy_reponse(body)
-
-    # Return Lambda prozy response
-    return resp
+    return proxy_reponse(body)
 
 
 def get_response(path, *_):
@@ -166,7 +162,7 @@ def presign(key):
         'get_object',
         ExpiresIn=S3_PRESIGNED_URL_TTL,
         HttpMethod='GET',
-        Params={'Bucket': S3_BUCKET, 'Key': key},
+        Params=dict(Bucket=S3_BUCKET, Key=key),
     )
     return url
 
@@ -198,13 +194,7 @@ def redirect(path):
     :param str path: Rejection status code
     :return dict: Redirection response
     """
-    res = {
-        'statusCode': 301,
-        'headers': {
-            'Location': path,
-        },
-    }
-    return res
+    return dict(statusCode=301, headers={'Location': path})
 
 
 def reject(status_code, **kwargs):
@@ -216,15 +206,11 @@ def reject(status_code, **kwargs):
     :return dict: Rejection response
     """
     body = json.dumps(kwargs) if kwargs else ''
-    res = {
-        'body': body,
-        'statusCode': status_code,
-        'headers': {
-            'Content-Length': len(body),
-            'Content-Type': 'application/json; charset=UTF-8',
-        }
+    headers = {
+        'Content-Length': len(body),
+        'Content-Type': 'application/json; charset=UTF-8',
     }
-    return res
+    return dict(body=body, headers=headers, statusCode=status_code)
 
 
 def search(request):
@@ -246,11 +232,11 @@ def search(request):
                 _, version = tarball.replace('.tar.gz', '').split(f'{name}-')
                 version = StrictVersion(version)
                 if name not in hits or hits[name]['version'] < version:
-                    hits[name] = {
-                        'name': name,
-                        'version': version,
-                        'summary': f's3://{S3_BUCKET}/{key}',
-                    }
+                    hits[name] = dict(
+                        name=name,
+                        version=version,
+                        summary=f's3://{S3_BUCKET}/{key}',
+                    )
     data = [SEARCH_VALUE.safe_substitute(**x) for x in hits.values()]
     body = SEARCH.safe_substitute(data=''.join(data))
     resp = proxy_reponse(body, 'text/xml')
@@ -259,11 +245,7 @@ def search(request):
 
 # Lambda handlers
 
-ROUTES = {
-    'GET': get_response,
-    'HEAD': head_response,
-    'POST': post_response,
-}
+ROUTES = dict(GET=get_response, HEAD=head_response, POST=post_response)
 
 
 def proxy_request(event, *_):
@@ -285,8 +267,8 @@ def proxy_request(event, *_):
         res = reject(403, message='Forbidden')
 
     # Return proxy response
-    status = res['statusCode']
-    print(f'RESPONSE [{status}] {json.dumps(res)}')
+    statusCode = res['statusCode']
+    print(f'RESPONSE [{statusCode}] {json.dumps(res)}')
     return res
 
 
@@ -319,8 +301,8 @@ def reindex_bucket(event, *_):
 if __name__ == '__main__':  # pragma: no cover
     try:
         path = sys.argv[1]
-        event = {'path': path, 'httpMethod': 'GET'}
+        event = dict(path=path, httpMethod='GET')
     except IndexError:
         this = os.path.basename(__file__)
-        raise SystemExit(f"usage: python {this} <url-path>")
+        raise SystemExit(f'usage: python {this} <url-path>')
     proxy_request(event)
