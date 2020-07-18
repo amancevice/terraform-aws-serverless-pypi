@@ -45,7 +45,7 @@ def test_proxy_reponse():
         'body': body,
         'statusCode': 200,
         'headers': {
-            'Content-Size': len(body),
+            'Content-Length': len(body),
             'Content-Type': 'text/html; charset=UTF-8',
         },
     }
@@ -61,7 +61,7 @@ def test_get_index():
         'body': SIMPLE_INDEX,
         'statusCode': 200,
         'headers': {
-            'Content-Size': len(SIMPLE_INDEX),
+            'Content-Length': len(SIMPLE_INDEX),
             'Content-Type': 'text/html; charset=UTF-8',
         },
     }
@@ -76,7 +76,7 @@ def test_get_package_index():
         'body': PACKAGE_INDEX,
         'statusCode': 200,
         'headers': {
-            'Content-Size': len(PACKAGE_INDEX),
+            'Content-Length': len(PACKAGE_INDEX),
             'Content-Type': 'text/html; charset=UTF-8',
         },
     }
@@ -105,7 +105,7 @@ def test_get_package_index_not_found():
         'body': body,
         'statusCode': 404,
         'headers': {
-            'Content-Size': len(body),
+            'Content-Length': len(body),
             'Content-Type': 'application/json; charset=UTF-8',
         },
     }
@@ -125,7 +125,7 @@ def test_reject():
         'body': body,
         'statusCode': 401,
         'headers': {
-            'Content-Size': len(body),
+            'Content-Length': len(body),
             'Content-Type': 'application/json; charset=UTF-8',
         },
     }
@@ -180,7 +180,7 @@ def test_proxy_request_reject(http_method, path, status_code):
     exp = index.reject(status_code, message='Forbidden')
     if http_method == 'HEAD':
         exp['body'] = ''
-        exp['headers']['Content-Size'] = 0
+        exp['headers']['Content-Length'] = 0
     assert ret == exp
 
 
@@ -240,7 +240,7 @@ def test_search(pip):
         'body': body,
         'statusCode': 200,
         'headers': {
-            'Content-Size': len(body),
+            'Content-Length': len(body),
             'Content-Type': 'text/xml; charset=UTF-8',
         },
     }

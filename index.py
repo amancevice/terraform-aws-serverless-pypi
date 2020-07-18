@@ -133,7 +133,7 @@ def head_response(path, *_):
     """
     res = get_response(path)
     res['body'] = ''
-    res['headers']['Content-Size'] = 0
+    res['headers']['Content-Length'] = 0
     return res
 
 
@@ -177,7 +177,7 @@ def proxy_reponse(body, content_type=None):
         'body': body,
         'statusCode': 200,
         'headers': {
-            'Content-Size': len(body),
+            'Content-Length': len(body),
             'Content-Type': f'{content_type}; charset=UTF-8',
         },
     }
@@ -211,7 +211,7 @@ def reject(status_code, **kwargs):
         'body': body,
         'statusCode': status_code,
         'headers': {
-            'Content-Size': len(body),
+            'Content-Length': len(body),
             'Content-Type': 'application/json; charset=UTF-8',
         }
     }
