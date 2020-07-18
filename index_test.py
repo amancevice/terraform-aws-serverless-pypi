@@ -8,6 +8,7 @@ import pytest
 with mock.patch('boto3.client'):
     import index
     index.BASE_PATH = 'simple'
+    index.S3_BUCKET = 'serverless-pypi'
 
 SIMPLE_INDEX = (
     '<!DOCTYPE html><html><head><title>Simple index</title></head>'
