@@ -47,9 +47,10 @@ FALLBACK_INDEX_URL = os.getenv('FALLBACK_INDEX_URL')
 
 
 def get_index():
-    """ GET /{BASE_PATH}/
+    """
+    GET /{BASE_PATH}/
 
-        :return dict: Response
+    :return dict: Response
     """
     index = S3.get_object(Bucket=S3_BUCKET, Key='index.html')
     body = index['Body'].read().decode()
@@ -58,10 +59,11 @@ def get_index():
 
 
 def get_package_index(name):
-    """ GET /{BASE_PATH}/<pkg>/
+    """
+    GET /{BASE_PATH}/<pkg>/
 
-        :param str name: Package name
-        :return dict: Response
+    :param str name: Package name
+    :return dict: Response
     """
     # Get keys for given package
     pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Prefix=f'{name}/')
@@ -104,10 +106,11 @@ def get_package_index(name):
 
 
 def get_response(path, *_):
-    """ GET /{BASE_PATH}/*
+    """
+    GET /{BASE_PATH}/*
 
-        :param str path: Request path
-        :return dict: Response
+    :param str path: Request path
+    :return dict: Response
     """
     # GET /
     if not path and BASE_PATH:
@@ -126,10 +129,11 @@ def get_response(path, *_):
 
 
 def head_response(path, *_):
-    """ HEAD /{BASE_PATH}/*
+    """
+    HEAD /{BASE_PATH}/*
 
-        :param str path: Request path
-        :return dict: Response
+    :param str path: Request path
+    :return dict: Response
     """
     res = get_response(path)
     res['body'] = ''
@@ -138,11 +142,12 @@ def head_response(path, *_):
 
 
 def post_response(path, body):
-    """ POST /{BASE_PATH}/
+    """
+    POST /{BASE_PATH}/
 
-        :param str path: POST path
-        :param str body: POST body
-        :return dict: Response
+    :param str path: POST path
+    :param str body: POST body
+    :return dict: Response
     """
     if path == BASE_PATH:
         return search(body)
@@ -151,10 +156,11 @@ def post_response(path, body):
 
 
 def presign(key):
-    """ Presign package URLs.
+    """
+    Presign package URLs.
 
-        :param str key: S3 key to presign
-        :return str: Presigned URL
+    :param str key: S3 key to presign
+    :return str: Presigned URL
     """
     url = S3.generate_presigned_url(
         'get_object',
@@ -166,10 +172,11 @@ def presign(key):
 
 
 def proxy_reponse(body, content_type=None):
-    """ Convert HTML to API Gateway response.
+    """
+    Convert HTML to API Gateway response.
 
-        :param str body: HTML body
-        :return dict: API Gateway Lambda proxy response
+    :param str body: HTML body
+    :return dict: API Gateway Lambda proxy response
     """
     content_type = content_type or 'text/html'
     # Wrap HTML in proxy response object
@@ -185,10 +192,11 @@ def proxy_reponse(body, content_type=None):
 
 
 def redirect(path):
-    """ Redirect requests.
+    """
+    Redirect requests.
 
-        :param str path: Rejection status code
-        :return dict: Redirection response
+    :param str path: Rejection status code
+    :return dict: Redirection response
     """
     res = {
         'statusCode': 301,
@@ -200,11 +208,12 @@ def redirect(path):
 
 
 def reject(status_code, **kwargs):
-    """ Bad request.
+    """
+    Bad request.
 
-        :param int status_code: Rejection status code
-        :param dict kwargs: Rejection body JSON
-        :return dict: Rejection response
+    :param int status_code: Rejection status code
+    :param dict kwargs: Rejection body JSON
+    :return dict: Rejection response
     """
     body = json.dumps(kwargs) if kwargs else ''
     res = {
@@ -219,10 +228,11 @@ def reject(status_code, **kwargs):
 
 
 def search(request):
-    """ Search for pips.
+    """
+    Search for pips.
 
-        :param str request: XML request string
-        :return str: XML response
+    :param str request: XML request string
+    :return str: XML response
     """
     tree = xml.fromstring(request)
     term = tree.find('.//string').text  # TODO this is not ideal
@@ -257,7 +267,9 @@ ROUTES = {
 
 
 def proxy_request(event, *_):
-    """ Handle API Gateway proxy request. """
+    """
+    Handle API Gateway proxy request.
+    """
     print(f'EVENT {json.dumps(event)}')
     print(f'BASE_PATH {BASE_PATH!r}')
 
@@ -279,7 +291,9 @@ def proxy_request(event, *_):
 
 
 def reindex_bucket(event, *_):
-    """ Reindex S3 bucket. """
+    """
+    Reindex S3 bucket.
+    """
     print(f'EVENT {json.dumps(event)}')
 
     # Get package names from common prefixes
