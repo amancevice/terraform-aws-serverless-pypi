@@ -1,51 +1,25 @@
-variable api_authorization {
-  description = "API Gateway method authorization [NONE | CUSTOM | AWS_IAM | COGNITO_USER_POOLS]"
-  default     = "NONE"
+variable iam_role_description {
+  description = "Lambda functions IAM role description"
+  default     = "PyPI Lambda permissions"
 }
 
-variable api_authorizer_id {
-  description = "API Gateway authorizer ID"
-  default     = null
+variable iam_role_name {
+  description = "Lambda function role name"
 }
 
-variable api_base_path {
-  description = "PyPI index API Gateway base path"
-  default     = null
-}
-
-variable api_deployment_stage_name {
-  description = "API Gateway REST API deployment stage name"
-  default     = "simple"
-}
-
-variable api_deployment_variables {
-  description = "API Gateway REST API deployment stage name"
-  type        = map(string)
-  default     = {}
-}
-
-variable api_description {
-  description = "API Gateway REST API description"
-  default     = "PyPI service"
-}
-
-variable api_endpoint_configuration_type {
-  description = "API Gateway endpoint configuration type [EDGE | REGIONAL | PRIVATE]"
-  default     = "REGIONAL"
-}
-
-variable api_name {
-  description = "API Gateway REST API name"
-}
-
-variable fallback_index_url {
-  description = "Optional fallback PyPI index URL"
-  default     = null
+variable iam_role_policy_name {
+  description = "IAM role inline policy name"
+  default     = "pypi-lambda-permissions"
 }
 
 variable lambda_api_description {
   description = "REST API Lambda function description"
   default     = "PyPI service REST API"
+}
+
+variable lambda_api_fallback_index_url {
+  description = "Optional fallback PyPI index URL"
+  default     = null
 }
 
 variable lambda_api_function_name {
@@ -93,23 +67,41 @@ variable lambda_reindex_qualifier {
   default     = null
 }
 
+variable lambda_runtime {
+  description = "Lambda runtime"
+  default     = "python3.8"
+}
+
 variable log_group_retention_in_days {
   description = "CloudWatch log group retention period"
   default     = 30
 }
 
-variable policy_name {
-  description = "IAM role inline policy name"
-  default     = "pypi-lambda-permissions"
+variable rest_api_authorization {
+  description = "API Gateway method authorization [NONE | CUSTOM | AWS_IAM | COGNITO_USER_POOLS]"
+  default     = "NONE"
 }
 
-variable role_description {
-  description = "Lambda functions IAM role description"
-  default     = "PyPI Lambda permissions"
+variable rest_api_authorizer_id {
+  description = "API Gateway authorizer ID"
+  default     = null
 }
 
-variable role_name {
-  description = "Lambda function role name"
+variable rest_api_base_path {
+  description = "PyPI index API Gateway base path"
+  default     = null
+}
+
+variable rest_api_execution_arn {
+  description = "API Gateway REST API execution ARN"
+}
+
+variable rest_api_id {
+  description = "API Gateway REST API ID"
+}
+
+variable rest_api_root_resource_id {
+  description = "API Gateway root resource ID"
 }
 
 variable s3_bucket_name {
@@ -123,6 +115,6 @@ variable s3_presigned_url_ttl {
 
 variable tags {
   description = "Resource tags"
-  type        = map
+  type        = map(string)
   default     = {}
 }
