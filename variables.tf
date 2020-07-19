@@ -78,7 +78,7 @@ variable log_group_retention_in_days {
 }
 
 variable rest_api_authorization {
-  description = "API Gateway method authorization [NONE | CUSTOM | AWS_IAM | COGNITO_USER_POOLS]"
+  description = "API Gateway method authorization [ NONE | CUSTOM | AWS_IAM | COGNITO_USER_POOLS ]"
   default     = "NONE"
 }
 

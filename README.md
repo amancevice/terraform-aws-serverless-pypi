@@ -7,7 +7,7 @@
 
 S3-backed serverless PyPI.
 
-Requests to your PyPI server will be proxied through a Lambda function that pulls content from an S3 bucket and reponds with the same HTML content that you might find in a conventional PyPI server.
+Requests to your PyPI server will be proxied through a Lambda function that pulls content from an S3 bucket and responds with the same HTML content that you might find in a conventional PyPI server.
 
 Requests to the base path (eg, `/simple/`) will respond with the contents of an `index.html` file at the root of your S3 bucket.
 
@@ -19,26 +19,40 @@ Package uploads/removals on S3 will trigger a Lambda function that reindexes the
 
 ## Usage
 
-```hcl
+As of v2 users are expected to bring-your-own REST API instead of providing one inside the module. This gives users greater flexibility in choosing how their API is set up.
+
+Users can deploy their API inside a VPC, for example, or attach this module to a resource inside a pre-existing API in a "monolithic" approach to API Gateway management.
+
+A very simple setup is as follows:
+
+```terraform
+resource aws_api_gateway_rest_api pypi {
+  name = "serverless-pypi"
+}
+
 module serverless_pypi {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 1.2"
+  version = "~> 2.0"
 
-  # ...
-  api_name                       = "serverless-pypi.example.com"
-  api_endpoint_configuation_type = "REGIONAL | EDGE | PRIVATE"
-  lambda_api_function_name       = "serverless-pypi-api"
-  lambda_reindex_function_name   = "serverless-pypi-reindex"
-  role_name                      = "serverless-pypi-role"
-  s3_bucket_name                 = "serverless-pypi.example.com"
-  s3_presigned_url_ttl           = 900
-  # ...
+  # Custom names / config
+  iam_role_name                = "serverless-pypi-role"
+  lambda_api_function_name     = "serverless-pypi-api-proxy"
+  lambda_reindex_function_name = "serverless-pypi-reindexer"
+  s3_bucket_name               = "serverless-pypi.example.com"
+  s3_presigned_url_ttl         = 900
+
+  # API Gateway config
+  rest_api_execution_arn    = aws_api_gateway_rest_api.pypi.execution_arn
+  rest_api_id               = aws_api_gateway_rest_api.pypi.id
+  rest_api_root_resource_id = aws_api_gateway_rest_api.pypi.root_resource_id
+
+  # etc...
 }
 ```
 
 ## S3 Bucket Organization
 
-This tool is highly opinionated about how your S3 bucket is organized. Your root keyspace should only contain the auto-generated `index.html` and "directories" of your PyPI packages.
+This tool is highly opinionated about how your S3 bucket is organized. Your root key space should only contain the auto-generated `index.html` and "directories" of your PyPI packages.
 
 Packages should exist one level deep in the bucket where the prefix is the name of the project.
 
@@ -69,19 +83,20 @@ pip install boto3 --index-url https://my.private.pypi/simple/
 
 If instead, you configure a fallback index URL in the terraform module, then requesting a pip that isn't found in the bucket will be re-routed to the fallback.
 
-```hcl
+```terraform
 module serverless_pypi {
   source  = "amancevice/serverless-pypi/aws"
+  version = "~> 2.0"
 
-  # ...
-  fallback_index_url = "https://pypi.org/simple/"
-  # ...
+  lambda_api_fallback_index_url = "https://pypi.org/simple/"
+
+  # etc...
 }
 ```
 
 ## Auth
 
-Please note that this tool provides **NO** authentication layer for your PyPI server out of the box. This is difficult to implement because `pip` is currently not very forgiving with any kind of auth pattern outside Basic Auth.
+Please note that this tool provides **NO** authentication layer for your PyPI index out of the box. This is difficult to implement because `pip` is currently not very forgiving with any kind of auth pattern outside Basic Auth.
 
 ### Cognito Basic Auth
 
@@ -89,30 +104,29 @@ I have provided a very simple authentication implementation using AWS Cognito an
 
 Add a Cognito-backed Basic authentication layer to your serverless PyPI with the `serverless-pypi-cognito` module:
 
-```hcl
+```terraform
 module serverless_pypi_cognito {
-  source               = "amancevice/serverless-pypi-cognito/aws"
-  version              = "~> 0.2"
-  api_id               = module.serverless_pypi.api.id
-  lambda_function_name = "serverless-pypi-authorizer"
-  role_name            = "serverless-pypi-authorizer-role"
-  user_pool_name       = "serverless-pypi-cognito-pool"
+  source  = "amancevice/serverless-pypi-cognito/aws"
+  version = "~> 1.0"
+
+  cognito_user_pool_name = "serverless-pypi-cognito-pool"
+  iam_role_name          = "serverless-pypi-authorizer-role"
+  lambda_function_name   = "serverless-pypi-authorizer"
+  rest_api_id            = aws_api_gateway_rest_api.pypi.id
+
 }
 ```
 
 You will also need to update your serverless PyPI module with the authorizer ID and authorization strategy:
 
-```hcl
+```terraform
 module serverless_pypi {
   source  = "amancevice/serverless-pypi/aws"
+  version = "~> 2.0"
 
-  # ...
-  api_authorization = "CUSTOM"
-  api_authorizer_id = module.serverless_pypi_cognito.authorizer.id
-  # ...
+  rest_api_authorization = "CUSTOM"
+  rest_api_authorizer_id = module.serverless_pypi_cognito.rest_api_authorizer.id
+
+  # etc...
 }
 ```
-
-### Private VPC Endpoint
-
-Another solution to this is to deploy the API Gateway as a private endpoint inside a VPC. You will need to set up a VPC endpoint for this to work, however. Be warned that creating a VPC endpoint for API Gateway can have unintended consequences if you are not prepared. I've broken things by doing this.
