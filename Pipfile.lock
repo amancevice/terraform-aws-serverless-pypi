@@ -191,10 +191,10 @@
         },
         "lambda-gateway": {
             "hashes": [
-                "sha256:03a6f1053c11b8782dcd643e7d4e6aa8e2a0389ba6938a4b77169bfbdf374ea1"
+                "sha256:fa208311131a5b8a18b3db99cb999affd9aba4828bc9bc361301f3ce0597f81d"
             ],
             "index": "pypi",
-            "version": "==0.7.2"
+            "version": "==0.7.3"
         },
         "mccabe": {
             "hashes": [
