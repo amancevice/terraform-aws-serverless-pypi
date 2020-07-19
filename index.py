@@ -7,7 +7,7 @@ from xml.etree import ElementTree as xml
 
 import boto3
 
-BASE_PATH = os.getenv('BASE_PATH', '').strip('/')
+BASE_PATH = os.path.join('/', os.getenv('BASE_PATH', ''), '')
 ANCHOR = string.Template('<a href="$href">$name</a><br>')
 INDEX = string.Template(
     '<!DOCTYPE html><html><head><title>$title</title></head>'
@@ -108,17 +108,18 @@ def get_response(path, *_):
     :param str path: Request path
     :return dict: Response
     """
-    # GET /
-    if not path and BASE_PATH:
-        return redirect(f'/{BASE_PATH}/')
+    # GET /{BASE_PATH}
+    if path in ['/', BASE_PATH.rstrip('/')]:
+        return redirect(BASE_PATH)
 
     # GET /{BASE_PATH}/
-    if path == BASE_PATH:
+    elif path == BASE_PATH:
         return get_index()
 
     # GET /{BASE_PATH}/*
     elif path.startswith(BASE_PATH):
-        return get_package_index(os.path.basename(path))
+        name = path[len(BASE_PATH):].strip('/')
+        return get_package_index(name)
 
     # 403 Forbidden
     return reject(403, message='Forbidden')
@@ -257,7 +258,7 @@ def proxy_request(event, *_):
 
     # Get HTTP request method/path
     method = event.get('httpMethod')
-    path = event.get('path').strip('/')
+    path = event.get('path')
     body = event.get('body')
 
     # Get HTTP response

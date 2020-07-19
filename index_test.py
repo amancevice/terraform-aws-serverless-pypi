@@ -1,14 +1,16 @@
 import io
 import json
+import os
 import textwrap
 from unittest import mock
 
 import pytest
 
+os.environ['BASE_PATH'] = 'simple'
+os.environ['S3_BUCKET'] = 'serverless-pypi'
+
 with mock.patch('boto3.client'):
     import index
-    index.BASE_PATH = 'simple'
-    index.S3_BUCKET = 'serverless-pypi'
 
 SIMPLE_INDEX = (
     '<!DOCTYPE html><html><head><title>Simple index</title></head>'
