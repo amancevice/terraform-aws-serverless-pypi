@@ -79,7 +79,7 @@ resource aws_s3_bucket_public_access_block pypi {
   restrict_public_buckets = true
 }
 
-# IAM ROLE
+# IAM
 
 data aws_iam_policy_document assume_role {
   statement {
