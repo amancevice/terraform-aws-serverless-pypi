@@ -1,9 +1,10 @@
-.PHONY: default clean test up validate
-
-default: test validate
+package.zip: index.py | validate
+	zip $@ $^
 
 .terraform:
 	terraform init
+
+.PHONY: clean test up validate
 
 clean:
 	rm -rf .terraform
@@ -15,5 +16,5 @@ test:
 up:
 	lambda-gateway index.proxy_request -B simple
 
-validate: | .terraform
+validate: test | .terraform
 	terraform validate
