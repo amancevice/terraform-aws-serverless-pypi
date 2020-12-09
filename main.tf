@@ -1,5 +1,12 @@
 terraform {
-  required_version = "~> 0.12"
+  required_version = "~> 0.13"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.0"
+    }
+  }
 }
 
 locals {
@@ -50,13 +57,13 @@ locals {
 
 # S3
 
-resource aws_s3_bucket pypi {
+resource "aws_s3_bucket" "pypi" {
   acl    = "private"
   bucket = local.s3.bucket_name
   tags   = local.tags
 }
 
-resource aws_s3_bucket_notification reindex {
+resource "aws_s3_bucket_notification" "reindex" {
   bucket = aws_s3_bucket.pypi.id
 
   lambda_function {
@@ -71,7 +78,7 @@ resource aws_s3_bucket_notification reindex {
   }
 }
 
-resource aws_s3_bucket_public_access_block pypi {
+resource "aws_s3_bucket_public_access_block" "pypi" {
   block_public_acls       = true
   block_public_policy     = true
   bucket                  = aws_s3_bucket.pypi.id
@@ -81,7 +88,7 @@ resource aws_s3_bucket_public_access_block pypi {
 
 # IAM
 
-data aws_iam_policy_document assume_role {
+data "aws_iam_policy_document" "assume_role" {
   statement {
     actions = ["sts:AssumeRole"]
 
@@ -92,7 +99,7 @@ data aws_iam_policy_document assume_role {
   }
 }
 
-data aws_iam_policy_document policy {
+data "aws_iam_policy_document" "policy" {
   statement {
     sid = "ReadS3"
 
@@ -125,14 +132,14 @@ data aws_iam_policy_document policy {
   }
 }
 
-resource aws_iam_role role {
+resource "aws_iam_role" "role" {
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
   description        = local.iam_role.description
   name               = local.iam_role.name
   tags               = local.tags
 }
 
-resource aws_iam_role_policy policy {
+resource "aws_iam_role_policy" "policy" {
   name   = local.iam_role.policy_name
   role   = aws_iam_role.role.id
   policy = data.aws_iam_policy_document.policy.json
@@ -140,7 +147,7 @@ resource aws_iam_role_policy policy {
 
 # LAMBDA
 
-data archive_file package {
+data "archive_file" "package" {
   source_file = "${path.module}/index.py"
   output_path = "${path.module}/package.zip"
   type        = "zip"
@@ -148,13 +155,13 @@ data archive_file package {
 
 # LAMBDA :: API PROXY
 
-resource aws_cloudwatch_log_group api {
+resource "aws_cloudwatch_log_group" "api" {
   name              = "/aws/lambda/${aws_lambda_function.api.function_name}"
   retention_in_days = local.log_group_retention_in_days
   tags              = local.tags
 }
 
-resource aws_lambda_function api {
+resource "aws_lambda_function" "api" {
   description      = local.lambda_api.description
   filename         = data.archive_file.package.output_path
   function_name    = local.lambda_api.function_name
@@ -176,7 +183,7 @@ resource aws_lambda_function api {
   }
 }
 
-resource aws_lambda_permission invoke_api {
+resource "aws_lambda_permission" "invoke_api" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.api.function_name
   principal     = "apigateway.amazonaws.com"
@@ -187,13 +194,13 @@ resource aws_lambda_permission invoke_api {
 
 # LAMBDA :: REINDEXER
 
-resource aws_cloudwatch_log_group reindex {
+resource "aws_cloudwatch_log_group" "reindex" {
   name              = "/aws/lambda/${aws_lambda_function.reindex.function_name}"
   retention_in_days = local.log_group_retention_in_days
   tags              = local.tags
 }
 
-resource aws_lambda_function reindex {
+resource "aws_lambda_function" "reindex" {
   description      = local.lambda_reindex.description
   filename         = data.archive_file.package.output_path
   function_name    = local.lambda_reindex.function_name
@@ -212,7 +219,7 @@ resource aws_lambda_function reindex {
   }
 }
 
-resource aws_lambda_permission invoke_reindex {
+resource "aws_lambda_permission" "invoke_reindex" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.reindex.function_name
   principal     = "s3.amazonaws.com"
@@ -223,7 +230,7 @@ resource aws_lambda_permission invoke_reindex {
 
 # API GATEWAY :: /
 
-resource aws_api_gateway_method root_get {
+resource "aws_api_gateway_method" "root_get" {
   authorization = local.rest_api.authorization
   authorizer_id = local.rest_api.authorizer_id
   http_method   = "GET"
@@ -231,7 +238,7 @@ resource aws_api_gateway_method root_get {
   rest_api_id   = local.rest_api.id
 }
 
-resource aws_api_gateway_method root_head {
+resource "aws_api_gateway_method" "root_head" {
   authorization = local.rest_api.authorization
   authorizer_id = local.rest_api.authorizer_id
   http_method   = "HEAD"
@@ -239,7 +246,7 @@ resource aws_api_gateway_method root_head {
   rest_api_id   = local.rest_api.id
 }
 
-resource aws_api_gateway_method root_post {
+resource "aws_api_gateway_method" "root_post" {
   authorization = local.rest_api.authorization
   authorizer_id = local.rest_api.authorizer_id
   http_method   = "POST"
@@ -247,7 +254,7 @@ resource aws_api_gateway_method root_post {
   rest_api_id   = local.rest_api.id
 }
 
-resource aws_api_gateway_integration root_get {
+resource "aws_api_gateway_integration" "root_get" {
   content_handling        = "CONVERT_TO_TEXT"
   http_method             = aws_api_gateway_method.root_get.http_method
   integration_http_method = "POST"
@@ -257,7 +264,7 @@ resource aws_api_gateway_integration root_get {
   uri                     = aws_lambda_function.api.invoke_arn
 }
 
-resource aws_api_gateway_integration root_head {
+resource "aws_api_gateway_integration" "root_head" {
   content_handling        = "CONVERT_TO_TEXT"
   http_method             = aws_api_gateway_method.root_head.http_method
   integration_http_method = "POST"
@@ -267,7 +274,7 @@ resource aws_api_gateway_integration root_head {
   uri                     = aws_lambda_function.api.invoke_arn
 }
 
-resource aws_api_gateway_integration root_post {
+resource "aws_api_gateway_integration" "root_post" {
   content_handling        = "CONVERT_TO_TEXT"
   http_method             = aws_api_gateway_method.root_post.http_method
   integration_http_method = "POST"
@@ -279,13 +286,13 @@ resource aws_api_gateway_integration root_post {
 
 # API GATEWAY :: /{proxy+}
 
-resource aws_api_gateway_resource proxy {
+resource "aws_api_gateway_resource" "proxy" {
   rest_api_id = local.rest_api.id
   parent_id   = local.rest_api.root_resource_id
   path_part   = "{proxy+}"
 }
 
-resource aws_api_gateway_method proxy_get {
+resource "aws_api_gateway_method" "proxy_get" {
   authorization = local.rest_api.authorization
   authorizer_id = local.rest_api.authorizer_id
   http_method   = "GET"
@@ -293,7 +300,7 @@ resource aws_api_gateway_method proxy_get {
   rest_api_id   = local.rest_api.id
 }
 
-resource aws_api_gateway_method proxy_head {
+resource "aws_api_gateway_method" "proxy_head" {
   authorization = local.rest_api.authorization
   authorizer_id = local.rest_api.authorizer_id
   http_method   = "HEAD"
@@ -301,7 +308,7 @@ resource aws_api_gateway_method proxy_head {
   rest_api_id   = local.rest_api.id
 }
 
-resource aws_api_gateway_method proxy_post {
+resource "aws_api_gateway_method" "proxy_post" {
   authorization = local.rest_api.authorization
   authorizer_id = local.rest_api.authorizer_id
   http_method   = "POST"
@@ -309,7 +316,7 @@ resource aws_api_gateway_method proxy_post {
   rest_api_id   = local.rest_api.id
 }
 
-resource aws_api_gateway_integration proxy_get {
+resource "aws_api_gateway_integration" "proxy_get" {
   content_handling        = "CONVERT_TO_TEXT"
   http_method             = aws_api_gateway_method.proxy_get.http_method
   integration_http_method = "POST"
@@ -319,7 +326,7 @@ resource aws_api_gateway_integration proxy_get {
   uri                     = aws_lambda_function.api.invoke_arn
 }
 
-resource aws_api_gateway_integration proxy_head {
+resource "aws_api_gateway_integration" "proxy_head" {
   content_handling        = "CONVERT_TO_TEXT"
   http_method             = aws_api_gateway_method.proxy_head.http_method
   integration_http_method = "POST"
@@ -329,7 +336,7 @@ resource aws_api_gateway_integration proxy_head {
   uri                     = aws_lambda_function.api.invoke_arn
 }
 
-resource aws_api_gateway_integration proxy_post {
+resource "aws_api_gateway_integration" "proxy_post" {
   content_handling        = "CONVERT_TO_TEXT"
   http_method             = aws_api_gateway_method.proxy_post.http_method
   integration_http_method = "POST"
