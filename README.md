@@ -26,11 +26,11 @@ Users can deploy their API inside a VPC, for example, or attach this module to a
 A very simple setup is as follows:
 
 ```terraform
-resource aws_api_gateway_rest_api pypi {
+resource "aws_api_gateway_rest_api" "pypi" {
   name = "serverless-pypi"
 }
 
-module serverless_pypi {
+module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
   version = "~> 2.0"
 
@@ -84,7 +84,7 @@ pip install boto3 --index-url https://my.private.pypi/simple/
 If instead, you configure a fallback index URL in the terraform module, then requesting a pip that isn't found in the bucket will be re-routed to the fallback.
 
 ```terraform
-module serverless_pypi {
+module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
   version = "~> 2.0"
 
@@ -105,7 +105,7 @@ I have provided a very simple authentication implementation using AWS Cognito an
 Add a Cognito-backed Basic authentication layer to your serverless PyPI with the `serverless-pypi-cognito` module:
 
 ```terraform
-module serverless_pypi_cognito {
+module "serverless_pypi_cognito" {
   source  = "amancevice/serverless-pypi-cognito/aws"
   version = "~> 1.0"
 
@@ -120,7 +120,7 @@ module serverless_pypi_cognito {
 You will also need to update your serverless PyPI module with the authorizer ID and authorization strategy:
 
 ```terraform
-module serverless_pypi {
+module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
   version = "~> 2.0"
 
