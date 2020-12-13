@@ -10,10 +10,13 @@ terraform {
 }
 
 locals {
-  lambda_api_arn              = var.lambda_api_qualifier == null ? aws_lambda_function.api.arn : "${aws_lambda_function.api.arn}:${var.lambda_api_qualifier}"
-  lambda_reindex_arn          = var.lambda_reindex_qualifier == null ? aws_lambda_function.reindex.arn : "${aws_lambda_function.reindex.arn}:${var.lambda_reindex_qualifier}"
-  log_group_retention_in_days = var.log_group_retention_in_days
-  tags                        = var.tags
+  tags = var.tags
+
+  http_api = {
+    id                     = var.http_api_id
+    execution_arn          = var.http_api_execution_arn
+    payload_format_version = var.http_api_payload_format_version
+  }
 
   iam_role = {
     description = var.iam_role_description
@@ -22,60 +25,47 @@ locals {
   }
 
   lambda_api = {
-    description        = var.lambda_api_description
-    function_name      = var.lambda_api_function_name
-    memory_size        = var.lambda_api_memory_size
-    publish            = var.lambda_api_publish
-    qualifier          = var.lambda_api_qualifier
-    fallback_index_url = var.lambda_api_fallback_index_url
-    runtime            = var.lambda_runtime
+    alias_name             = var.lambda_api_alias_name
+    alias_function_version = var.lambda_api_alias_function_version
+    base_path              = var.lambda_api_base_path
+    description            = var.lambda_api_description
+    function_name          = var.lambda_api_function_name
+    memory_size            = var.lambda_api_memory_size
+    publish                = var.lambda_api_publish
+    fallback_index_url     = var.lambda_api_fallback_index_url
+    runtime                = var.lambda_runtime
   }
 
   lambda_reindex = {
-    description   = var.lambda_reindex_description
-    function_name = var.lambda_reindex_function_name
-    memory_size   = var.lambda_reindex_memory_size
-    publish       = var.lambda_reindex_publish
-    qualifier     = var.lambda_reindex_qualifier
-    runtime       = var.lambda_runtime
+    alias_name             = var.lambda_reindex_alias_name
+    alias_function_version = var.lambda_reindex_alias_function_version
+    description            = var.lambda_reindex_description
+    function_name          = var.lambda_reindex_function_name
+    memory_size            = var.lambda_reindex_memory_size
+    publish                = var.lambda_reindex_publish
+    runtime                = var.lambda_runtime
   }
 
-  rest_api = {
-    authorization    = var.rest_api_authorization
-    authorizer_id    = var.rest_api_authorizer_id
-    base_path        = var.rest_api_base_path
-    execution_arn    = var.rest_api_execution_arn
-    id               = var.rest_api_id
-    root_resource_id = var.rest_api_root_resource_id
+  log_group = {
+    retention_in_days = var.log_group_retention_in_days
   }
 
   s3 = {
     bucket_name       = var.s3_bucket_name
     presigned_url_ttl = var.s3_presigned_url_ttl
   }
+
+  sns_topic = {
+    name = var.sns_topic_name
+  }
 }
 
-# S3
+# S3 :: BUCKET
 
 resource "aws_s3_bucket" "pypi" {
   acl    = "private"
   bucket = local.s3.bucket_name
   tags   = local.tags
-}
-
-resource "aws_s3_bucket_notification" "reindex" {
-  bucket = aws_s3_bucket.pypi.id
-
-  lambda_function {
-    filter_suffix       = ".tar.gz"
-    id                  = "InvokeReindexer"
-    lambda_function_arn = local.lambda_reindex_arn
-
-    events = [
-      "s3:ObjectCreated:*",
-      "s3:ObjectRemoved:*",
-    ]
-  }
 }
 
 resource "aws_s3_bucket_public_access_block" "pypi" {
@@ -84,6 +74,60 @@ resource "aws_s3_bucket_public_access_block" "pypi" {
   bucket                  = aws_s3_bucket.pypi.id
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+# S3 :: EVENTS
+
+data "aws_caller_identity" "current" {
+}
+
+data "aws_iam_policy_document" "topic_policy" {
+  statement {
+    actions   = ["sns:Publish"]
+    resources = ["arn:aws:sns:*:*:${local.sns_topic.name}"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["s3.amazonaws.com"]
+    }
+
+    condition {
+      test     = "ArnEquals"
+      variable = "aws:SourceArn"
+      values   = [aws_s3_bucket.pypi.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
+}
+
+resource "aws_s3_bucket_notification" "reindex" {
+  bucket = aws_s3_bucket.pypi.id
+
+  topic {
+    filter_suffix = ".tar.gz"
+    topic_arn     = aws_sns_topic.reindex.arn
+
+    events = [
+      "s3:ObjectCreated:*",
+      "s3:ObjectRemoved:*",
+    ]
+  }
+}
+
+resource "aws_sns_topic" "reindex" {
+  name   = local.sns_topic.name
+  policy = data.aws_iam_policy_document.topic_policy.json
+}
+
+resource "aws_sns_topic_subscription" "reindex" {
+  endpoint  = aws_lambda_alias.reindex.arn
+  protocol  = "lambda"
+  topic_arn = aws_sns_topic.reindex.arn
 }
 
 # IAM
@@ -115,9 +159,9 @@ data "aws_iam_policy_document" "policy" {
   }
 
   statement {
-    sid       = "Reindex"
+    sid       = "ReindexS3"
     actions   = ["s3:PutObject"]
-    resources = ["arn:aws:s3:::${aws_s3_bucket.pypi.bucket}/index.html"]
+    resources = ["${aws_s3_bucket.pypi.arn}/index.html"]
   }
 
   statement {
@@ -157,8 +201,14 @@ data "archive_file" "package" {
 
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/aws/lambda/${aws_lambda_function.api.function_name}"
-  retention_in_days = local.log_group_retention_in_days
+  retention_in_days = local.log_group.retention_in_days
   tags              = local.tags
+}
+
+resource "aws_lambda_alias" "api" {
+  name             = local.lambda_api.alias_name
+  function_name    = aws_lambda_function.api.arn
+  function_version = local.lambda_api.alias_function_version
 }
 
 resource "aws_lambda_function" "api" {
@@ -175,7 +225,7 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      BASE_PATH            = local.rest_api.base_path
+      BASE_PATH            = local.lambda_api.base_path
       FALLBACK_INDEX_URL   = local.lambda_api.fallback_index_url
       S3_BUCKET            = aws_s3_bucket.pypi.bucket
       S3_PRESIGNED_URL_TTL = local.s3.presigned_url_ttl
@@ -185,19 +235,25 @@ resource "aws_lambda_function" "api" {
 
 resource "aws_lambda_permission" "invoke_api" {
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
+  function_name = aws_lambda_alias.api.function_name
   principal     = "apigateway.amazonaws.com"
-  qualifier     = local.lambda_api.qualifier
+  qualifier     = aws_lambda_alias.api.name
+  source_arn    = "${local.http_api.execution_arn}/*/*/*"
   statement_id  = "InvokeAPI"
-  source_arn    = "${local.rest_api.execution_arn}/*/*/*"
 }
 
 # LAMBDA :: REINDEXER
 
 resource "aws_cloudwatch_log_group" "reindex" {
   name              = "/aws/lambda/${aws_lambda_function.reindex.function_name}"
-  retention_in_days = local.log_group_retention_in_days
+  retention_in_days = local.log_group.retention_in_days
   tags              = local.tags
+}
+
+resource "aws_lambda_alias" "reindex" {
+  name             = local.lambda_reindex.alias_name
+  function_name    = aws_lambda_function.reindex.arn
+  function_version = local.lambda_reindex.alias_function_version
 }
 
 resource "aws_lambda_function" "reindex" {
@@ -219,129 +275,67 @@ resource "aws_lambda_function" "reindex" {
   }
 }
 
-resource "aws_lambda_permission" "invoke_reindex" {
+resource "aws_lambda_permission" "reindex" {
+  statement_id  = "Reindex"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.reindex.function_name
-  principal     = "s3.amazonaws.com"
-  qualifier     = local.lambda_reindex.qualifier
-  statement_id  = "InvokeReindexer"
-  source_arn    = aws_s3_bucket.pypi.arn
+  function_name = aws_lambda_alias.reindex.function_name
+  principal     = "sns.amazonaws.com"
+  qualifier     = aws_lambda_alias.reindex.name
+  source_arn    = aws_sns_topic.reindex.arn
 }
 
-# API GATEWAY :: /
+# API GATEWAY :: HTTP INTEGRATIONS
 
-resource "aws_api_gateway_method" "root_get" {
-  authorization = local.rest_api.authorization
-  authorizer_id = local.rest_api.authorizer_id
-  http_method   = "GET"
-  resource_id   = local.rest_api.root_resource_id
-  rest_api_id   = local.rest_api.id
+resource "aws_apigatewayv2_integration" "lambda" {
+  api_id                 = local.http_api.id
+  connection_type        = "INTERNET"
+  description            = "PyPI proxy handler"
+  integration_method     = "POST"
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_alias.api.invoke_arn
+  payload_format_version = local.http_api.payload_format_version
 }
 
-resource "aws_api_gateway_method" "root_head" {
-  authorization = local.rest_api.authorization
-  authorizer_id = local.rest_api.authorizer_id
-  http_method   = "HEAD"
-  resource_id   = local.rest_api.root_resource_id
-  rest_api_id   = local.rest_api.id
+# API GATEWAY :: HTTP ROUTES
+
+resource "aws_apigatewayv2_route" "root_get" {
+  api_id             = local.http_api.id
+  route_key          = "GET /"
+  authorization_type = "NONE"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-resource "aws_api_gateway_method" "root_post" {
-  authorization = local.rest_api.authorization
-  authorizer_id = local.rest_api.authorizer_id
-  http_method   = "POST"
-  resource_id   = local.rest_api.root_resource_id
-  rest_api_id   = local.rest_api.id
+resource "aws_apigatewayv2_route" "root_head" {
+  api_id             = local.http_api.id
+  route_key          = "HEAD /"
+  authorization_type = "NONE"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-resource "aws_api_gateway_integration" "root_get" {
-  content_handling        = "CONVERT_TO_TEXT"
-  http_method             = aws_api_gateway_method.root_get.http_method
-  integration_http_method = "POST"
-  resource_id             = local.rest_api.root_resource_id
-  rest_api_id             = local.rest_api.id
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
+resource "aws_apigatewayv2_route" "root_post" {
+  api_id             = local.http_api.id
+  route_key          = "POST /"
+  authorization_type = "NONE"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-resource "aws_api_gateway_integration" "root_head" {
-  content_handling        = "CONVERT_TO_TEXT"
-  http_method             = aws_api_gateway_method.root_head.http_method
-  integration_http_method = "POST"
-  resource_id             = local.rest_api.root_resource_id
-  rest_api_id             = local.rest_api.id
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
+resource "aws_apigatewayv2_route" "proxy_get" {
+  api_id             = local.http_api.id
+  route_key          = "GET /{proxy+}"
+  authorization_type = "NONE"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-resource "aws_api_gateway_integration" "root_post" {
-  content_handling        = "CONVERT_TO_TEXT"
-  http_method             = aws_api_gateway_method.root_post.http_method
-  integration_http_method = "POST"
-  resource_id             = local.rest_api.root_resource_id
-  rest_api_id             = local.rest_api.id
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
+resource "aws_apigatewayv2_route" "proxy_head" {
+  api_id             = local.http_api.id
+  route_key          = "HEAD /{proxy+}"
+  authorization_type = "NONE"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
-# API GATEWAY :: /{proxy+}
-
-resource "aws_api_gateway_resource" "proxy" {
-  rest_api_id = local.rest_api.id
-  parent_id   = local.rest_api.root_resource_id
-  path_part   = "{proxy+}"
-}
-
-resource "aws_api_gateway_method" "proxy_get" {
-  authorization = local.rest_api.authorization
-  authorizer_id = local.rest_api.authorizer_id
-  http_method   = "GET"
-  resource_id   = aws_api_gateway_resource.proxy.id
-  rest_api_id   = local.rest_api.id
-}
-
-resource "aws_api_gateway_method" "proxy_head" {
-  authorization = local.rest_api.authorization
-  authorizer_id = local.rest_api.authorizer_id
-  http_method   = "HEAD"
-  resource_id   = aws_api_gateway_resource.proxy.id
-  rest_api_id   = local.rest_api.id
-}
-
-resource "aws_api_gateway_method" "proxy_post" {
-  authorization = local.rest_api.authorization
-  authorizer_id = local.rest_api.authorizer_id
-  http_method   = "POST"
-  resource_id   = aws_api_gateway_resource.proxy.id
-  rest_api_id   = local.rest_api.id
-}
-
-resource "aws_api_gateway_integration" "proxy_get" {
-  content_handling        = "CONVERT_TO_TEXT"
-  http_method             = aws_api_gateway_method.proxy_get.http_method
-  integration_http_method = "POST"
-  resource_id             = aws_api_gateway_resource.proxy.id
-  rest_api_id             = local.rest_api.id
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
-}
-
-resource "aws_api_gateway_integration" "proxy_head" {
-  content_handling        = "CONVERT_TO_TEXT"
-  http_method             = aws_api_gateway_method.proxy_head.http_method
-  integration_http_method = "POST"
-  resource_id             = aws_api_gateway_resource.proxy.id
-  rest_api_id             = local.rest_api.id
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
-}
-
-resource "aws_api_gateway_integration" "proxy_post" {
-  content_handling        = "CONVERT_TO_TEXT"
-  http_method             = aws_api_gateway_method.proxy_post.http_method
-  integration_http_method = "POST"
-  resource_id             = aws_api_gateway_resource.proxy.id
-  rest_api_id             = local.rest_api.id
-  type                    = "AWS_PROXY"
-  uri                     = aws_lambda_function.api.invoke_arn
+resource "aws_apigatewayv2_route" "proxy_post" {
+  api_id             = local.http_api.id
+  route_key          = "POST /{proxy+}"
+  authorization_type = "NONE"
+  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }

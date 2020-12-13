@@ -1,5 +1,18 @@
+variable "http_api_id" {
+  description = "API Gateway HTTP API ID"
+}
+
+variable "http_api_execution_arn" {
+  description = "API Gateway HTTP API execution ARN"
+}
+
+variable "http_api_payload_format_version" {
+  description = "API Gateway HTTP API Lambda integration payload format version"
+  default     = "2.0"
+}
+
 variable "iam_role_description" {
-  description = "Lambda functions IAM role description"
+  description = "Lambda function IAM role description"
   default     = "PyPI Lambda permissions"
 }
 
@@ -10,6 +23,21 @@ variable "iam_role_name" {
 variable "iam_role_policy_name" {
   description = "IAM role inline policy name"
   default     = "pypi-lambda-permissions"
+}
+
+variable "lambda_api_alias_name" {
+  description = "PyPI API Lambda alias name"
+  default     = "prod"
+}
+
+variable "lambda_api_alias_function_version" {
+  description = "PyPI API Lambda alias target function version"
+  default     = "$LATEST"
+}
+
+variable "lambda_api_base_path" {
+  description = "PyPI index API Gateway base path"
+  default     = null
 }
 
 variable "lambda_api_description" {
@@ -23,23 +51,28 @@ variable "lambda_api_fallback_index_url" {
 }
 
 variable "lambda_api_function_name" {
-  description = "REST API Lambda function name"
+  description = "PyPI API Lambda function name"
 }
 
 variable "lambda_api_memory_size" {
-  description = "REST API Lambda function memory size"
+  description = "PyPI API Lambda function memory size"
   default     = 128
 }
 
 variable "lambda_api_publish" {
-  description = "REST API Lambda function publish trigger"
+  description = "PyPI API Lambda function publish trigger"
   type        = bool
   default     = false
 }
 
-variable "lambda_api_qualifier" {
-  description = "REST API Lambda function qualifier"
-  default     = null
+variable "lambda_reindex_alias_name" {
+  description = "Reindexer Lambda alias name"
+  default     = "prod"
+}
+
+variable "lambda_reindex_alias_function_version" {
+  description = "Reindexer Lambda alias target function version"
+  default     = "$LATEST"
 }
 
 variable "lambda_reindex_description" {
@@ -62,11 +95,6 @@ variable "lambda_reindex_publish" {
   default     = false
 }
 
-variable "lambda_reindex_qualifier" {
-  description = "Reindexer Lambda function qualifier"
-  default     = null
-}
-
 variable "lambda_runtime" {
   description = "Lambda runtime"
   default     = "python3.8"
@@ -74,34 +102,7 @@ variable "lambda_runtime" {
 
 variable "log_group_retention_in_days" {
   description = "CloudWatch log group retention period"
-  default     = 30
-}
-
-variable "rest_api_authorization" {
-  description = "API Gateway method authorization [ NONE | CUSTOM | AWS_IAM | COGNITO_USER_POOLS ]"
-  default     = "NONE"
-}
-
-variable "rest_api_authorizer_id" {
-  description = "API Gateway authorizer ID"
-  default     = null
-}
-
-variable "rest_api_base_path" {
-  description = "PyPI index API Gateway base path"
-  default     = null
-}
-
-variable "rest_api_execution_arn" {
-  description = "API Gateway REST API execution ARN"
-}
-
-variable "rest_api_id" {
-  description = "API Gateway REST API ID"
-}
-
-variable "rest_api_root_resource_id" {
-  description = "API Gateway root resource ID"
+  default     = 0
 }
 
 variable "s3_bucket_name" {
@@ -111,6 +112,10 @@ variable "s3_bucket_name" {
 variable "s3_presigned_url_ttl" {
   description = "PyPI package presigned URL expiration in seconds"
   default     = 900
+}
+
+variable "sns_topic_name" {
+  description = "SNS Topic name"
 }
 
 variable "tags" {
