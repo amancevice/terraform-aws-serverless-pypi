@@ -134,8 +134,23 @@ def test_reject():
     assert ret == exp
 
 
-def test_handler_get_root():
-    event = {'httpMethod': 'GET', 'path': '/'}
+@pytest.mark.parametrize('event', [
+    {
+        'version': '1.0',
+        'httpMethod': 'GET',
+        'path': '/',
+    },
+    {
+        'version': '2.0',
+        'requestContext': {
+            'http': {
+                'method': 'GET',
+                'path': '/',
+            },
+        },
+    },
+])
+def test_handler_get_root(event):
     ret = index.proxy_request(event)
     exp = {
         'statusCode': 301,
@@ -146,39 +161,97 @@ def test_handler_get_root():
     assert ret == exp
 
 
-@mock.patch('index.get_index')
-def test_proxy_request_get(mock_idx):
-    mock_idx.return_value = index.proxy_reponse(SIMPLE_INDEX)
-    index.proxy_request({'httpMethod': 'GET', 'path': '/simple/'})
-    mock_idx.assert_called_once_with()
+@pytest.mark.parametrize('event', [
+    {
+        'version': '1.0',
+        'httpMethod': 'GET',
+        'path': '/simple/',
+    },
+    {
+        'version': '2.0',
+        'requestContext': {
+            'http': {
+                'method': 'GET',
+                'path': '/simple/',
+            },
+        },
+    },
+])
+def test_proxy_request_get(event):
+    with mock.patch('index.get_index') as mock_idx:
+        mock_idx.return_value = index.proxy_reponse(SIMPLE_INDEX)
+        index.proxy_request(event)
+        mock_idx.assert_called_once_with()
 
 
-@mock.patch('index.search')
-def test_proxy_reponse_post(mock_search):
-    mock_search.return_value = index.proxy_reponse('{}')
-    index.proxy_request({
+@pytest.mark.parametrize('event', [
+    {
+        'version': '1.0',
         'body': '<SEARCH_XML>',
         'httpMethod': 'POST',
         'path': '/simple/',
-    })
-    mock_search.assert_called_once_with('<SEARCH_XML>')
-
-
-@mock.patch('index.get_package_index')
-def test_proxy_request_get_package(mock_pkg):
-    mock_pkg.return_value = index.proxy_reponse(PACKAGE_INDEX)
-    index.proxy_request({'httpMethod': 'GET', 'path': '/simple/fizz/'})
-    mock_pkg.assert_called_once_with('fizz')
-
-
-@pytest.mark.parametrize('http_method,path,status_code', [
-    ('HEAD', '/fizz/buzz/jazz', 403),
-    ('GET', '/fizz/buzz/jazz', 403),
-    ('POST', '/fizz/buzz/jazz', 403),
-    ('OPTIONS', '/fizz/buzz/jazz', 403),
+    },
+    {
+        'version': '2.0',
+        'body': '<SEARCH_XML>',
+        'requestContext': {
+            'http': {
+                'method': 'POST',
+                'path': '/simple/',
+            },
+        },
+    },
 ])
-def test_proxy_request_reject(http_method, path, status_code):
-    ret = index.proxy_request({'httpMethod': http_method, 'path': path})
+def test_proxy_reponse_post(event):
+    with mock.patch('index.search') as mock_search:
+        mock_search.return_value = index.proxy_reponse('{}')
+        index.proxy_request(event)
+        mock_search.assert_called_once_with('<SEARCH_XML>')
+
+
+@pytest.mark.parametrize('event', [
+    {
+        'version': '1.0',
+        'httpMethod': 'GET',
+        'path': '/simple/fizz/'
+    },
+    {
+        'version': '2.0',
+        'requestContext': {
+            'http': {
+                'method': 'GET',
+                'path': '/simple/fizz/',
+            },
+        },
+    },
+])
+def test_proxy_request_get_package(event):
+    with mock.patch('index.get_package_index') as mock_pkg:
+        mock_pkg.return_value = index.proxy_reponse(PACKAGE_INDEX)
+        index.proxy_request(event)
+        mock_pkg.assert_called_once_with('fizz')
+
+
+@pytest.mark.parametrize(('version', 'http_method', 'path', 'status_code'), [
+    ('1.0', 'HEAD', '/fizz/buzz/jazz', 403),
+    ('1.0', 'GET', '/fizz/buzz/jazz', 403),
+    ('1.0', 'POST', '/fizz/buzz/jazz', 403),
+    ('1.0', 'OPTIONS', '/fizz/buzz/jazz', 403),
+    ('2.0', 'HEAD', '/fizz/buzz/jazz', 403),
+    ('2.0', 'GET', '/fizz/buzz/jazz', 403),
+    ('2.0', 'POST', '/fizz/buzz/jazz', 403),
+    ('2.0', 'OPTIONS', '/fizz/buzz/jazz', 403),
+])
+def test_proxy_request_reject(version, http_method, path, status_code):
+    event = dict(version=version)
+    if version == '1.0':
+        event.update(httpMethod=http_method, path=path)
+    else:
+        event.update(requestContext=dict(http=dict(
+            method=http_method,
+            path=path,
+        )))
+    ret = index.proxy_request(event)
     exp = index.reject(status_code, message='Forbidden')
     if http_method == 'HEAD':
         exp['body'] = ''

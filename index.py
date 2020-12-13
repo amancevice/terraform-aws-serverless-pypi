@@ -1,7 +1,6 @@
 import json
 import os
 import string
-import sys
 from distutils.version import StrictVersion
 from xml.etree import ElementTree as xml
 
@@ -44,7 +43,63 @@ S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 FALLBACK_INDEX_URL = os.getenv('FALLBACK_INDEX_URL')
 
 
-# Lambda helpers
+# LAMBDA HANDLERS
+
+def proxy_request(event, *_):
+    """
+    Handle API Gateway proxy request.
+    """
+    print(f'EVENT {json.dumps(event)}')
+    print(f'BASE_PATH {BASE_PATH!r}')
+
+    # Get HTTP request method, path, and body
+    version = event.get('version')
+    if version == '1.0':
+        method, path, body = parse_payload_v1(event)
+    elif version == '2.0':
+        method, path, body = parse_payload_v2(event)
+    else:  # pragma: no cover
+        method = path = body = None
+
+    # Get HTTP response
+    try:
+        res = ROUTES[method](path, body)
+    except KeyError:
+        res = reject(403, message='Forbidden')
+
+    # Return proxy response
+    statusCode = res['statusCode']
+    print(f'RESPONSE [{statusCode}] {json.dumps(res)}')
+    return res
+
+
+def reindex_bucket(event, *_):
+    """
+    Reindex S3 bucket.
+    """
+    print(f'EVENT {json.dumps(event)}')
+
+    # Get package names from common prefixes
+    pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Delimiter='/')
+    pkgs = (
+        x.get('Prefix').strip('/')
+        for page in pages
+        for x in page.get('CommonPrefixes')
+    )
+
+    # Construct HTML
+    anchors = (ANCHOR.safe_substitute(href=pkg, name=pkg) for pkg in pkgs)
+    body = INDEX.safe_substitute(
+        title='Simple index',
+        anchors=''.join(anchors)
+    )
+
+    # Upload to S3 as index.html
+    res = S3.put_object(Bucket=S3_BUCKET, Key='index.html', Body=body.encode())
+    return res
+
+
+# LAMBDA HELPERS
 
 def get_index():
     """
@@ -136,6 +191,28 @@ def head_response(path, *_):
     res['body'] = ''
     res['headers']['Content-Length'] = 0
     return res
+
+
+def parse_payload_v1(event):
+    """
+    Get HTTP request method/path/body for v1 payloads.
+    """
+    method = event.get('httpMethod')
+    path = event.get('path')
+    body = event.get('body')
+    return (method, path, body)
+
+
+def parse_payload_v2(event):
+    """
+    Get HTTP request method/path/body for v2 payloads.
+    """
+    requestContext = event.get('requestContext') or {}
+    http = requestContext.get('http') or {}
+    method = http.get('method')
+    path = http.get('path')
+    body = event.get('body')
+    return (method, path, body)
 
 
 def post_response(path, body):
@@ -244,66 +321,4 @@ def search(request):
     return resp
 
 
-# Lambda handlers
-
 ROUTES = dict(GET=get_response, HEAD=head_response, POST=post_response)
-
-
-def proxy_request(event, *_):
-    """
-    Handle API Gateway proxy request.
-    """
-    print(f'EVENT {json.dumps(event)}')
-    print(f'BASE_PATH {BASE_PATH!r}')
-
-    # Get HTTP request method/path
-    method = event.get('httpMethod')
-    path = event.get('path')
-    body = event.get('body')
-
-    # Get HTTP response
-    try:
-        res = ROUTES[method](path, body)
-    except KeyError:
-        res = reject(403, message='Forbidden')
-
-    # Return proxy response
-    statusCode = res['statusCode']
-    print(f'RESPONSE [{statusCode}] {json.dumps(res)}')
-    return res
-
-
-def reindex_bucket(event, *_):
-    """
-    Reindex S3 bucket.
-    """
-    print(f'EVENT {json.dumps(event)}')
-
-    # Get package names from common prefixes
-    pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Delimiter='/')
-    pkgs = (
-        x.get('Prefix').strip('/')
-        for page in pages
-        for x in page.get('CommonPrefixes')
-    )
-
-    # Construct HTML
-    anchors = (ANCHOR.safe_substitute(href=pkg, name=pkg) for pkg in pkgs)
-    body = INDEX.safe_substitute(
-        title='Simple index',
-        anchors=''.join(anchors)
-    )
-
-    # Upload to S3 as index.html
-    res = S3.put_object(Bucket=S3_BUCKET, Key='index.html', Body=body.encode())
-    return res
-
-
-if __name__ == '__main__':  # pragma: no cover
-    try:
-        path = sys.argv[1]
-        event = dict(path=path, httpMethod='GET')
-    except IndexError:
-        this = os.path.basename(__file__)
-        raise SystemExit(f'usage: python {this} <url-path>')
-    proxy_request(event)
