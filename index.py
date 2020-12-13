@@ -163,16 +163,16 @@ def get_response(path, *_):
     :param str path: Request path
     :return dict: Response
     """
-    # GET /{BASE_PATH}
-    if path in ['/', BASE_PATH.rstrip('/')]:
-        return redirect(BASE_PATH)
-
     # GET /{BASE_PATH}/
-    elif path == BASE_PATH:
+    if path == BASE_PATH:
         return get_index()
 
+    # GET /{BASE_PATH}
+    if path == BASE_PATH.rstrip('/'):
+        return redirect(BASE_PATH)
+
     # GET /{BASE_PATH}/*
-    elif path.startswith(BASE_PATH):
+    if path.startswith(BASE_PATH):
         name = path[len(BASE_PATH):].strip('/')
         return get_package_index(name)
 
@@ -200,6 +200,7 @@ def parse_payload_v1(event):
     method = event.get('httpMethod')
     path = event.get('path')
     body = event.get('body')
+    print(f'{method} {path}')
     return (method, path, body)
 
 
@@ -212,6 +213,7 @@ def parse_payload_v2(event):
     method = http.get('method')
     path = http.get('path')
     body = event.get('body')
+    print(f'{method} {path}')
     return (method, path, body)
 
 

@@ -134,30 +134,74 @@ def test_reject():
     assert ret == exp
 
 
-@pytest.mark.parametrize('event', [
-    {
-        'version': '1.0',
-        'httpMethod': 'GET',
-        'path': '/',
-    },
-    {
-        'version': '2.0',
-        'requestContext': {
-            'http': {
-                'method': 'GET',
-                'path': '/',
+@pytest.mark.parametrize(('event', 'exp'), [
+    (
+        {
+            'version': '1.0',
+            'httpMethod': 'GET',
+            'path': '/simple',
+        },
+        {
+            'statusCode': 301,
+            'headers': {
+                'Location': '/simple/',
+            },
+        }
+    ),
+    (
+        {
+            'version': '2.0',
+            'requestContext': {
+                'http': {
+                    'method': 'GET',
+                    'path': '/simple',
+                },
             },
         },
-    },
-])
-def test_handler_get_root(event):
-    ret = index.proxy_request(event)
-    exp = {
-        'statusCode': 301,
-        'headers': {
-            'Location': '/simple/',
+        {
+            'statusCode': 301,
+            'headers': {
+                'Location': '/simple/',
+            },
+        }
+    ),
+    (
+        {
+            'version': '1.0',
+            'httpMethod': 'GET',
+            'path': '/',
         },
-    }
+        {
+            'statusCode': 403,
+            'body': json.dumps({'message': 'Forbidden'}),
+            'headers': {
+                'Content-Length': 24,
+                'Content-Type': 'application/json; charset=UTF-8',
+            },
+        }
+    ),
+    (
+        {
+            'version': '2.0',
+            'requestContext': {
+                'http': {
+                    'method': 'GET',
+                    'path': '/',
+                },
+            },
+        },
+        {
+            'statusCode': 403,
+            'body': json.dumps({'message': 'Forbidden'}),
+            'headers': {
+                'Content-Length': 24,
+                'Content-Type': 'application/json; charset=UTF-8',
+            },
+        }
+    ),
+])
+def test_handler_get_root(event, exp):
+    ret = index.proxy_request(event)
     assert ret == exp
 
 
