@@ -11,5 +11,6 @@
 *.coverage
 *.env
 *.zip
+.terraform.lock.hcl
 __pycache__/
 coverage.xml
