@@ -1,23 +1,48 @@
-.PHONY: clean test up validate
+REPO := cargometrics/serverless-pypi
 
-package.zip: index.py | validate
-	zip $@ $^
+all: validate
 
-coverage.xml: index*.py
-	flake8 $^
-	pytest
+clean:
+	rm -rf Dockerfile.iid
+
+clobber: clean
+	rm -rf .terraform*
+
+shell: .env Dockerfile.iid
+	docker run --interactive --rm --tty \
+	--entrypoint bash \
+	--env-file .env \
+	--volume ~/.aws:/root/.aws \
+	--volume $$PWD:/var/task \
+	$(REPO)
+
+up: .env Dockerfile.iid
+	docker run --rm --tty \
+	--entrypoint python \
+	--env-file .env \
+	--publish 8000:8000 \
+	--volume ~/.aws:/root/.aws \
+	--volume $$PWD:/var/task \
+	$(REPO) -m lambda_gateway index.proxy_request
+
+validate: Dockerfile.iid package.zip | .terraform
+	docker run --rm --tty --entrypoint pytest --volume $$PWD:/var/task $(REPO)
+	terraform fmt -check
+	AWS_REGION=us-east-1 terraform validate
+
+.PHONY: all clean clobber up validate
+
+.env:
+	touch $@
 
 .terraform:
 	terraform init
 
-clean:
-	rm -rf .terraform
+Dockerfile.iid: Dockerfile Pipfile
+	docker build --iidfile $@ --tag $(REPO) .
 
-test: coverage.xml
+Pipfile.lock: Dockerfile.iid
+	docker run --rm --entrypoint cat $(REPO) $@ > $@
 
-up:
-	lambda-gateway index.proxy_request -B simple
-
-validate: coverage.xml | .terraform
-	terraform fmt -check
-	terraform validate
+package.zip: index.py
+	zip $@ $<
