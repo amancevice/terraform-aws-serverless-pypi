@@ -1,5 +1,4 @@
 ARG PYTHON_VERSION=3.8
-
 FROM amazon/aws-lambda-python:${PYTHON_VERSION}
 RUN pip install pipenv==2020.11.15
 RUN pipenv install 2>&1

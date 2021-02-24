@@ -16,4 +16,5 @@ __pycache__/
 *.iid
 *.zip
 .terraform.lock.hcl
+coverage.xml
 !package.zip
