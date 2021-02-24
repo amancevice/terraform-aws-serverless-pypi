@@ -3,26 +3,25 @@ on:
   pull_request:
   push:
   schedule:
-    - cron: "11 21 * * *"
+    - cron: '11 21 * * *'
 jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
       - uses: amancevice/setup-code-climate@v0
         with:
           cc_test_reporter_id: ${{ secrets.CC_TEST_REPORTER_ID }}
       - run: cc-test-reporter before-build
-      - run: pip install boto3 flake8 pytest pytest-cov
-      - run: flake8
+      - run: pip install boto3 pytest pytest-cov pytest-flake8
       - run: pytest
       - run: cc-test-reporter after-build
         if: ${{ github.event_name != 'pull_request' }}
   terraform-validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - uses: hashicorp/setup-terraform@v1
       - run: terraform fmt -check
       - run: terraform init
