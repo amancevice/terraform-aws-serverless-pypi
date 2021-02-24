@@ -4,12 +4,12 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-flake8 = "*"
 ipdb = "*"
 ipython = "*"
 lambda-gateway = "*"
 pytest = "*"
 pytest-cov = "*"
+pytest-flake8 = "*"
 
 [packages]
 boto3 = "*"

@@ -1,39 +1,12 @@
 import json
+import logging
 import os
-import string
+import re
+from string import Template
 from distutils.version import StrictVersion
 from xml.etree import ElementTree as xml
 
 import boto3
-
-BASE_PATH = os.path.join('/', os.getenv('BASE_PATH', ''), '')
-ANCHOR = string.Template('<a href="$href">$name</a><br>')
-INDEX = string.Template(
-    '<!DOCTYPE html><html><head><title>$title</title></head>'
-    '<body><h1>$title</h1>$anchors</body></html>'
-)
-SEARCH = string.Template(
-    "<?xml version='1.0'?>"
-    '<methodResponse><params><param><value><array><data>'
-    '$data'
-    '</data></array></value></param></params></methodResponse>'
-)
-SEARCH_VALUE = string.Template(
-    '<struct>'
-    '<member><name>name</name><value><string>'
-    '$name'
-    '</string></value></member>'
-    '<member><name>summary</name><value><string>'
-    '$summary'
-    '</string></value></member>'
-    '<member><name>version</name><value><string>'
-    '$version'
-    '</string></value></member>'
-    '<member><name>_pypi_ordering</name><value><boolean>'
-    '0'
-    '</boolean></value></member>'
-    '</struct>'
-)
 
 S3 = boto3.client('s3')
 S3_BUCKET = os.getenv('S3_BUCKET', 'serverless-pypi')
@@ -41,25 +14,110 @@ S3_PAGINATOR = S3.get_paginator('list_objects')
 S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 
 FALLBACK_INDEX_URL = os.getenv('FALLBACK_INDEX_URL')
+LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
+LOG_FORMAT = os.getenv('LOG_FORMAT') or '%(levelname)s %(reqid)s %(message)s'
+
+
+class SuppressFilter(logging.Filter):
+    """
+    Suppress Log Records from registered logger
+
+    Taken from ``aws_lambda_powertools.logging.filters.SuppressFilter``
+    """
+    def __init__(self, logger):
+        self.logger = logger
+
+    def filter(self, record):
+        logger = record.name
+        return False if self.logger in logger else True
+
+
+class LambdaLoggerAdapter(logging.LoggerAdapter):
+    """
+    Lambda logger adapter.
+    """
+    def __init__(self, name, level=None, format_string=None):
+        # Get logger, formatter
+        logger = logging.getLogger(name)
+
+        # Set log level
+        logger.setLevel(level or LOG_LEVEL)
+
+        # Set handler if necessary
+        if not logger.handlers:  # and not logger.parent.handlers:
+            formatter = logging.Formatter(format_string or LOG_FORMAT)
+            handler = logging.StreamHandler()
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+
+        # Suppress AWS logging for this logger
+        for handler in logging.root.handlers:
+            logFilter = SuppressFilter(name)
+            handler.addFilter(logFilter)
+
+        # Initialize adapter with null RequestId
+        super().__init__(logger, dict(reqid='-'))
+
+    def attach(self, handler):
+        """
+        Decorate Lambda handler to attach logger to AWS request.
+
+        :Example:
+
+        >>> logger = lambo.getLogger(__name__)
+        >>>
+        >>> @logger.attach
+        ... def handler(event, context):
+        ...     logger.info('Hello, world!')
+        ...     return {'ok': True}
+        ...
+        >>> handler({'fizz': 'buzz'})
+        >>> # => INFO RequestId: {awsRequestId} EVENT {"fizz": "buzz"}
+        >>> # => INFO RequestId: {awsRequestId} Hello, world!
+        >>> # => INFO RequestId: {awsRequestId} RETURN {"ok": True}
+        """
+        def wrapper(event=None, context=None):
+            try:
+                self.addContext(context)
+                self.info('EVENT %s', json.dumps(event, default=str))
+                result = handler(event, context)
+                self.info('RETURN %s', json.dumps(result, default=str))
+                return result
+            finally:
+                self.dropContext()
+        return wrapper
+
+    def addContext(self, context=None):
+        """
+        Add runtime context to logger.
+        """
+        try:
+            reqid = f'RequestId: {context.aws_request_id}'
+        except AttributeError:
+            reqid = '-'
+        self.extra.update(reqid=reqid)
+        return self
+
+    def dropContext(self):
+        """
+        Drop runtime context from logger.
+        """
+        self.extra.update(reqid='-')
+        return self
+
+
+logger = LambdaLoggerAdapter('PyPI')
 
 
 # LAMBDA HANDLERS
 
-def proxy_request(event, *_):
+@logger.attach
+def proxy_request(event, context=None):
     """
     Handle API Gateway proxy request.
     """
-    print(f'EVENT {json.dumps(event)}')
-    print(f'BASE_PATH {BASE_PATH!r}')
-
     # Get HTTP request method, path, and body
-    version = event.get('version')
-    if version == '1.0':
-        method, path, body = parse_payload_v1(event)
-    elif version == '2.0':
-        method, path, body = parse_payload_v2(event)
-    else:  # pragma: no cover
-        method = path = body = None
+    method, path, body = parse_payload(event)
 
     # Get HTTP response
     try:
@@ -68,23 +126,21 @@ def proxy_request(event, *_):
         res = reject(403, message='Forbidden')
 
     # Return proxy response
-    statusCode = res['statusCode']
-    print(f'RESPONSE [{statusCode}] {json.dumps(res)}')
+    logger.info('RESPONSE [%s]', res['statusCode'])
     return res
 
 
-def reindex_bucket(event, *_):
+@logger.attach
+def reindex_bucket(event=None, context=None):
     """
     Reindex S3 bucket.
     """
-    print(f'EVENT {json.dumps(event)}')
-
     # Get package names from common prefixes
     pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Delimiter='/')
     pkgs = (
         x.get('Prefix').strip('/')
         for page in pages
-        for x in page.get('CommonPrefixes')
+        for x in page.get('CommonPrefixes', [])
     )
 
     # Construct HTML
@@ -134,7 +190,7 @@ def get_package_index(name):
 
     # Respond with 404 if no keys and no fallback index
     elif not any(keys):
-        return reject(404, message='Not found')
+        return reject(404, message='Not Found')
 
     # Convert keys to presigned URLs
     hrefs = [presign(key) for key in keys]
@@ -163,21 +219,12 @@ def get_response(path, *_):
     :param str path: Request path
     :return dict: Response
     """
-    # GET /{BASE_PATH}/
-    if path == BASE_PATH:
+    # GET /
+    if path == '/':
         return get_index()
 
-    # GET /{BASE_PATH}
-    if path == BASE_PATH.rstrip('/'):
-        return redirect(BASE_PATH)
-
-    # GET /{BASE_PATH}/*
-    if path.startswith(BASE_PATH):
-        name = path[len(BASE_PATH):].strip('/')
-        return get_package_index(name)
-
-    # 403 Forbidden
-    return reject(403, message='Forbidden')
+    # GET /*
+    return get_package_index(path.strip('/'))
 
 
 def head_response(path, *_):
@@ -193,18 +240,7 @@ def head_response(path, *_):
     return res
 
 
-def parse_payload_v1(event):
-    """
-    Get HTTP request method/path/body for v1 payloads.
-    """
-    method = event.get('httpMethod')
-    path = event.get('path')
-    body = event.get('body')
-    print(f'{method} {path}')
-    return (method, path, body)
-
-
-def parse_payload_v2(event):
+def parse_payload(event):
     """
     Get HTTP request method/path/body for v2 payloads.
     """
@@ -213,19 +249,19 @@ def parse_payload_v2(event):
     method = http.get('method')
     path = http.get('path')
     body = event.get('body')
-    print(f'{method} {path}')
+    logger.info('%s %s', method, path)
     return (method, path, body)
 
 
 def post_response(path, body):
     """
-    POST /{BASE_PATH}/
+    POST /
 
     :param str path: POST path
     :param str body: POST body
     :return dict: Response
     """
-    if path == BASE_PATH:
+    if path == '/':
         return search(body)
 
     return reject(403, message='Forbidden')
@@ -323,4 +359,70 @@ def search(request):
     return resp
 
 
+class MiniTemplate(Template):
+    def __init__(self, template):
+        super().__init__(re.sub(r'\n *', '', template))
+
+
 ROUTES = dict(GET=get_response, HEAD=head_response, POST=post_response)
+ANCHOR = MiniTemplate('<a href="$href">$name</a><br>')
+INDEX = MiniTemplate(
+    '''
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <title>$title</title>
+        </head>
+        <body>
+            <h1>$title</h1>
+            $anchors
+        </body>
+    </html>
+    '''
+)
+SEARCH = MiniTemplate(
+    '''
+    <?xml version='1.0'?>
+    <methodResponse>
+        <params>
+            <param>
+                <value>
+                    <array>
+                        <data>$data</data>
+                    </array>
+                </value>
+            </param>
+        </params>
+    </methodResponse>
+    '''
+)
+SEARCH_VALUE = MiniTemplate(
+    '''
+    <struct>
+        <member>
+            <name>name</name>
+            <value>
+                <string>$name</string>
+            </value>
+        </member>
+        <member>
+            <name>summary</name>
+            <value>
+                <string>$summary</string>
+            </value>
+        </member>
+        <member>
+            <name>version</name>
+            <value>
+                <string>$version</string>
+            </value>
+        </member>
+        <member>
+            <name>_pypi_ordering</name>
+            <value>
+                <boolean>0</boolean>
+            </value>
+        </member>
+    </struct>
+    '''
+)

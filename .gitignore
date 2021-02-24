@@ -8,9 +8,12 @@
 # .tfvars files
 *.tfvars
 
+.docker/
+.venv/
+__pycache__/
 *.coverage
 *.env
+*.iid
 *.zip
 .terraform.lock.hcl
-__pycache__/
-coverage.xml
+!package.zip
