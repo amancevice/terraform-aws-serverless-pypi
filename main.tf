@@ -13,9 +13,8 @@ locals {
   tags = var.tags
 
   http_api = {
-    id                     = var.http_api_id
-    execution_arn          = var.http_api_execution_arn
-    payload_format_version = var.http_api_payload_format_version
+    id            = var.http_api_id
+    execution_arn = var.http_api_execution_arn
   }
 
   iam_role = {
@@ -24,10 +23,14 @@ locals {
     policy_name = var.iam_role_policy_name
   }
 
+  lambda = {
+    filename         = "${path.module}/package.zip"
+    source_code_hash = filebase64sha256("${path.module}/package.zip")
+  }
+
   lambda_api = {
     alias_name             = var.lambda_api_alias_name
     alias_function_version = var.lambda_api_alias_function_version
-    base_path              = var.lambda_api_base_path
     description            = var.lambda_api_description
     function_name          = var.lambda_api_function_name
     memory_size            = var.lambda_api_memory_size
@@ -189,14 +192,6 @@ resource "aws_iam_role_policy" "policy" {
   policy = data.aws_iam_policy_document.policy.json
 }
 
-# LAMBDA
-
-data "archive_file" "package" {
-  source_file = "${path.module}/index.py"
-  output_path = "${path.module}/package.zip"
-  type        = "zip"
-}
-
 # LAMBDA :: API PROXY
 
 resource "aws_cloudwatch_log_group" "api" {
@@ -213,19 +208,18 @@ resource "aws_lambda_alias" "api" {
 
 resource "aws_lambda_function" "api" {
   description      = local.lambda_api.description
-  filename         = data.archive_file.package.output_path
+  filename         = local.lambda.filename
   function_name    = local.lambda_api.function_name
   handler          = "index.proxy_request"
   memory_size      = local.lambda_api.memory_size
   publish          = local.lambda_api.publish
   role             = aws_iam_role.role.arn
   runtime          = local.lambda_api.runtime
-  source_code_hash = data.archive_file.package.output_base64sha256
+  source_code_hash = local.lambda.source_code_hash
   tags             = local.tags
 
   environment {
     variables = {
-      BASE_PATH            = local.lambda_api.base_path
       FALLBACK_INDEX_URL   = local.lambda_api.fallback_index_url
       S3_BUCKET            = aws_s3_bucket.pypi.bucket
       S3_PRESIGNED_URL_TTL = local.s3.presigned_url_ttl
@@ -258,14 +252,14 @@ resource "aws_lambda_alias" "reindex" {
 
 resource "aws_lambda_function" "reindex" {
   description      = local.lambda_reindex.description
-  filename         = data.archive_file.package.output_path
+  filename         = local.lambda.filename
   function_name    = local.lambda_reindex.function_name
   handler          = "index.reindex_bucket"
   memory_size      = local.lambda_reindex.memory_size
   publish          = local.lambda_reindex.publish
   role             = aws_iam_role.role.arn
   runtime          = local.lambda_reindex.runtime
-  source_code_hash = data.archive_file.package.output_base64sha256
+  source_code_hash = local.lambda.source_code_hash
   tags             = local.tags
 
   environment {
@@ -293,7 +287,7 @@ resource "aws_apigatewayv2_integration" "lambda" {
   integration_method     = "POST"
   integration_type       = "AWS_PROXY"
   integration_uri        = aws_lambda_alias.api.invoke_arn
-  payload_format_version = local.http_api.payload_format_version
+  payload_format_version = "2.0"
 }
 
 # API GATEWAY :: HTTP ROUTES

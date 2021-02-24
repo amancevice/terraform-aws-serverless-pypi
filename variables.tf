@@ -6,11 +6,6 @@ variable "http_api_execution_arn" {
   description = "API Gateway HTTP API execution ARN"
 }
 
-variable "http_api_payload_format_version" {
-  description = "API Gateway HTTP API Lambda integration payload format version"
-  default     = "2.0"
-}
-
 variable "iam_role_description" {
   description = "Lambda function IAM role description"
   default     = "PyPI Lambda permissions"
@@ -33,11 +28,6 @@ variable "lambda_api_alias_name" {
 variable "lambda_api_alias_function_version" {
   description = "PyPI API Lambda alias target function version"
   default     = "$LATEST"
-}
-
-variable "lambda_api_base_path" {
-  description = "PyPI index API Gateway base path"
-  default     = null
 }
 
 variable "lambda_api_description" {
