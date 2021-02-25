@@ -12,8 +12,9 @@ terraform {
 locals {
   http_api = {
     authorization_type = var.api_authorization_type
-    id                 = var.api_id
+    authorizer_id      = var.api_authorizer_id
     execution_arn      = var.api_execution_arn
+    id                 = var.api_id
   }
 
   iam_role = {
@@ -304,6 +305,7 @@ resource "aws_apigatewayv2_integration" "lambda" {
 
 resource "aws_apigatewayv2_route" "root_get" {
   api_id             = local.http_api.id
+  authorizer_id      = local.http_api.authorizer_id
   route_key          = "GET /"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
@@ -311,6 +313,7 @@ resource "aws_apigatewayv2_route" "root_get" {
 
 resource "aws_apigatewayv2_route" "root_head" {
   api_id             = local.http_api.id
+  authorizer_id      = local.http_api.authorizer_id
   route_key          = "HEAD /"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
@@ -318,6 +321,7 @@ resource "aws_apigatewayv2_route" "root_head" {
 
 resource "aws_apigatewayv2_route" "root_post" {
   api_id             = local.http_api.id
+  authorizer_id      = local.http_api.authorizer_id
   route_key          = "POST /"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
@@ -325,6 +329,7 @@ resource "aws_apigatewayv2_route" "root_post" {
 
 resource "aws_apigatewayv2_route" "proxy_get" {
   api_id             = local.http_api.id
+  authorizer_id      = local.http_api.authorizer_id
   route_key          = "GET /{proxy+}"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
@@ -332,6 +337,7 @@ resource "aws_apigatewayv2_route" "proxy_get" {
 
 resource "aws_apigatewayv2_route" "proxy_head" {
   api_id             = local.http_api.id
+  authorizer_id      = local.http_api.authorizer_id
   route_key          = "HEAD /{proxy+}"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
@@ -339,6 +345,7 @@ resource "aws_apigatewayv2_route" "proxy_head" {
 
 resource "aws_apigatewayv2_route" "proxy_post" {
   api_id             = local.http_api.id
+  authorizer_id      = local.http_api.authorizer_id
   route_key          = "POST /{proxy+}"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
