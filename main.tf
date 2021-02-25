@@ -11,8 +11,9 @@ terraform {
 
 locals {
   http_api = {
-    id            = var.http_api_id
-    execution_arn = var.http_api_execution_arn
+    authorization_type = var.http_api_authorization_type
+    id                 = var.http_api_id
+    execution_arn      = var.http_api_execution_arn
   }
 
   iam_role = {
@@ -304,41 +305,41 @@ resource "aws_apigatewayv2_integration" "lambda" {
 resource "aws_apigatewayv2_route" "root_get" {
   api_id             = local.http_api.id
   route_key          = "GET /"
-  authorization_type = "NONE"
+  authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
 resource "aws_apigatewayv2_route" "root_head" {
   api_id             = local.http_api.id
   route_key          = "HEAD /"
-  authorization_type = "NONE"
+  authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
 resource "aws_apigatewayv2_route" "root_post" {
   api_id             = local.http_api.id
   route_key          = "POST /"
-  authorization_type = "NONE"
+  authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
 resource "aws_apigatewayv2_route" "proxy_get" {
   api_id             = local.http_api.id
   route_key          = "GET /{proxy+}"
-  authorization_type = "NONE"
+  authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
 resource "aws_apigatewayv2_route" "proxy_head" {
   api_id             = local.http_api.id
   route_key          = "HEAD /{proxy+}"
-  authorization_type = "NONE"
+  authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
 resource "aws_apigatewayv2_route" "proxy_post" {
   api_id             = local.http_api.id
   route_key          = "POST /{proxy+}"
-  authorization_type = "NONE"
+  authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }

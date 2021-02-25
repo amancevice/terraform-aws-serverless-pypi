@@ -1,3 +1,8 @@
+variable "http_api_authorization_type" {
+  description = "API Gateway HTTP API routes authorization type"
+  default     = "NONE"
+}
+
 variable "http_api_id" {
   description = "API Gateway HTTP API ID"
 }

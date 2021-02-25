@@ -32,21 +32,32 @@ resource "aws_api_gateway_rest_api" "pypi" {
 
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 2.0"
+  version = "~> 3.0"
 
-  # Custom names / config
-  iam_role_name                = "serverless-pypi-role"
-  lambda_api_function_name     = "serverless-pypi-api-proxy"
-  lambda_reindex_function_name = "serverless-pypi-reindexer"
-  s3_bucket_name               = "serverless-pypi.example.com"
-  s3_presigned_url_ttl         = 900
+  iam_role_name = "serverless-pypi-role"
 
-  # API Gateway config
-  rest_api_execution_arn    = aws_api_gateway_rest_api.pypi.execution_arn
-  rest_api_id               = aws_api_gateway_rest_api.pypi.id
-  rest_api_root_resource_id = aws_api_gateway_rest_api.pypi.root_resource_id
+  http_api_id            = "<http-api-id>"
+  http_api_execution_arn = "<http-api-execution-arn>"
 
-  # etc...
+  lambda_api_fallback_index_url = "https://pypi.org/simple/"
+  lambda_api_function_name      = "serverless-pypi-pypi-http-api"
+  lambda_api_tags               = { /**/ }
+
+  lambda_reindex_function_name = "serverless-pypi-pypi-reindex"
+  lambda_reindex_tags          = { /**/ }
+
+  log_group_api_retention_in_days     = 30
+  log_group_api_tags                  = { /**/ }
+  log_group_reindex_retention_in_days = 30
+  log_group_reindex_tags              = { /**/ }
+
+  s3_bucket_name = "serverless-pypi-bucket"
+  s3_bucket_tags = { /* … */ }
+
+  sns_topic_name = "serverless-pypi-s3-events"
+  sns_topic_tags = { /* … */ }
+
+  # etc …
 }
 ```
 
@@ -113,7 +124,6 @@ module "serverless_pypi_cognito" {
   iam_role_name          = "serverless-pypi-authorizer-role"
   lambda_function_name   = "serverless-pypi-authorizer"
   rest_api_id            = aws_api_gateway_rest_api.pypi.id
-
 }
 ```
 
@@ -122,11 +132,11 @@ You will also need to update your serverless PyPI module with the authorizer ID 
 ```terraform
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 2.0"
+  version = "~> 3.0"
 
   rest_api_authorization = "CUSTOM"
   rest_api_authorizer_id = module.serverless_pypi_cognito.rest_api_authorizer.id
 
-  # etc...
+  # etc …
 }
 ```
