@@ -20,6 +20,12 @@ variable "iam_role_policy_name" {
   default     = "pypi-lambda-permissions"
 }
 
+variable "iam_role_tags" {
+  description = "Resource tags"
+  type        = map(string)
+  default     = {}
+}
+
 variable "lambda_api_alias_name" {
   description = "PyPI API Lambda alias name"
   default     = "prod"
@@ -55,6 +61,12 @@ variable "lambda_api_publish" {
   default     = false
 }
 
+variable "lambda_api_tags" {
+  description = "Resource tags"
+  type        = map(string)
+  default     = {}
+}
+
 variable "lambda_reindex_alias_name" {
   description = "Reindexer Lambda alias name"
   default     = "prod"
@@ -85,18 +97,47 @@ variable "lambda_reindex_publish" {
   default     = false
 }
 
+variable "lambda_reindex_tags" {
+  description = "Resource tags"
+  type        = map(string)
+  default     = {}
+}
+
 variable "lambda_runtime" {
   description = "Lambda runtime"
   default     = "python3.8"
 }
 
-variable "log_group_retention_in_days" {
+variable "log_group_api_retention_in_days" {
   description = "CloudWatch log group retention period"
   default     = 0
 }
 
+variable "log_group_api_tags" {
+  description = "Resource tags"
+  type        = map(string)
+  default     = {}
+}
+
+variable "log_group_reindex_retention_in_days" {
+  description = "CloudWatch log group retention period"
+  default     = 0
+}
+
+variable "log_group_reindex_tags" {
+  description = "Resource tags"
+  type        = map(string)
+  default     = {}
+}
+
 variable "s3_bucket_name" {
   description = "PyPI index S3 bucket name"
+}
+
+variable "s3_bucket_tags" {
+  description = "Resource tags"
+  type        = map(string)
+  default     = {}
 }
 
 variable "s3_presigned_url_ttl" {
@@ -108,7 +149,7 @@ variable "sns_topic_name" {
   description = "SNS Topic name"
 }
 
-variable "tags" {
+variable "sns_topic_tags" {
   description = "Resource tags"
   type        = map(string)
   default     = {}

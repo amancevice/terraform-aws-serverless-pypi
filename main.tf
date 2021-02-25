@@ -10,8 +10,6 @@ terraform {
 }
 
 locals {
-  tags = var.tags
-
   http_api = {
     id            = var.http_api_id
     execution_arn = var.http_api_execution_arn
@@ -21,10 +19,12 @@ locals {
     description = var.iam_role_description
     name        = var.iam_role_name
     policy_name = var.iam_role_policy_name
+    tags        = var.iam_role_tags
   }
 
   lambda = {
     filename         = "${path.module}/package.zip"
+    runtime          = var.lambda_runtime
     source_code_hash = filebase64sha256("${path.module}/package.zip")
   }
 
@@ -36,7 +36,7 @@ locals {
     memory_size            = var.lambda_api_memory_size
     publish                = var.lambda_api_publish
     fallback_index_url     = var.lambda_api_fallback_index_url
-    runtime                = var.lambda_runtime
+    tags                   = var.lambda_api_tags
   }
 
   lambda_reindex = {
@@ -46,20 +46,28 @@ locals {
     function_name          = var.lambda_reindex_function_name
     memory_size            = var.lambda_reindex_memory_size
     publish                = var.lambda_reindex_publish
-    runtime                = var.lambda_runtime
+    tags                   = var.lambda_reindex_tags
   }
 
-  log_group = {
-    retention_in_days = var.log_group_retention_in_days
+  log_group_api = {
+    retention_in_days = var.log_group_api_retention_in_days
+    tags              = var.log_group_api_tags
+  }
+
+  log_group_reindex = {
+    retention_in_days = var.log_group_reindex_retention_in_days
+    tags              = var.log_group_reindex_tags
   }
 
   s3 = {
     bucket_name       = var.s3_bucket_name
+    bucket_tags       = var.s3_bucket_tags
     presigned_url_ttl = var.s3_presigned_url_ttl
   }
 
   sns_topic = {
     name = var.sns_topic_name
+    tags = var.sns_topic_tags
   }
 }
 
@@ -68,7 +76,7 @@ locals {
 resource "aws_s3_bucket" "pypi" {
   acl    = "private"
   bucket = local.s3.bucket_name
-  tags   = local.tags
+  tags   = local.s3.bucket_tags
 }
 
 resource "aws_s3_bucket_public_access_block" "pypi" {
@@ -125,6 +133,7 @@ resource "aws_s3_bucket_notification" "reindex" {
 resource "aws_sns_topic" "reindex" {
   name   = local.sns_topic.name
   policy = data.aws_iam_policy_document.topic_policy.json
+  tags   = local.sns_topic.tags
 }
 
 resource "aws_sns_topic_subscription" "reindex" {
@@ -183,7 +192,7 @@ resource "aws_iam_role" "role" {
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
   description        = local.iam_role.description
   name               = local.iam_role.name
-  tags               = local.tags
+  tags               = local.iam_role.tags
 }
 
 resource "aws_iam_role_policy" "policy" {
@@ -196,8 +205,8 @@ resource "aws_iam_role_policy" "policy" {
 
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/aws/lambda/${aws_lambda_function.api.function_name}"
-  retention_in_days = local.log_group.retention_in_days
-  tags              = local.tags
+  retention_in_days = local.log_group_api.retention_in_days
+  tags              = local.log_group_api.tags
 }
 
 resource "aws_lambda_alias" "api" {
@@ -214,9 +223,9 @@ resource "aws_lambda_function" "api" {
   memory_size      = local.lambda_api.memory_size
   publish          = local.lambda_api.publish
   role             = aws_iam_role.role.arn
-  runtime          = local.lambda_api.runtime
+  runtime          = local.lambda.runtime
   source_code_hash = local.lambda.source_code_hash
-  tags             = local.tags
+  tags             = local.lambda_api.tags
 
   environment {
     variables = {
@@ -240,8 +249,8 @@ resource "aws_lambda_permission" "invoke_api" {
 
 resource "aws_cloudwatch_log_group" "reindex" {
   name              = "/aws/lambda/${aws_lambda_function.reindex.function_name}"
-  retention_in_days = local.log_group.retention_in_days
-  tags              = local.tags
+  retention_in_days = local.log_group_reindex.retention_in_days
+  tags              = local.log_group_reindex.tags
 }
 
 resource "aws_lambda_alias" "reindex" {
@@ -258,9 +267,9 @@ resource "aws_lambda_function" "reindex" {
   memory_size      = local.lambda_reindex.memory_size
   publish          = local.lambda_reindex.publish
   role             = aws_iam_role.role.arn
-  runtime          = local.lambda_reindex.runtime
+  runtime          = local.lambda.runtime
   source_code_hash = local.lambda.source_code_hash
-  tags             = local.tags
+  tags             = local.lambda_reindex.tags
 
   environment {
     variables = {
