@@ -11,9 +11,9 @@ terraform {
 
 locals {
   http_api = {
-    authorization_type = var.http_api_authorization_type
-    id                 = var.http_api_id
-    execution_arn      = var.http_api_execution_arn
+    authorization_type = var.api_authorization_type
+    id                 = var.api_id
+    execution_arn      = var.api_execution_arn
   }
 
   iam_role = {

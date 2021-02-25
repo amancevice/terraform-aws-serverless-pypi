@@ -36,8 +36,8 @@ module "serverless_pypi" {
 
   iam_role_name = "serverless-pypi-role"
 
-  http_api_id            = "<http-api-id>"
-  http_api_execution_arn = "<http-api-execution-arn>"
+  api_id            = "<http-api-id>"
+  api_execution_arn = "<http-api-execution-arn>"
 
   lambda_api_fallback_index_url = "https://pypi.org/simple/"
   lambda_api_function_name      = "serverless-pypi-pypi-http-api"

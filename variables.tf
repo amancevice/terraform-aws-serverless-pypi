@@ -1,13 +1,13 @@
-variable "http_api_authorization_type" {
+variable "api_authorization_type" {
   description = "API Gateway HTTP API routes authorization type"
   default     = "NONE"
 }
 
-variable "http_api_id" {
+variable "api_id" {
   description = "API Gateway HTTP API ID"
 }
 
-variable "http_api_execution_arn" {
+variable "api_execution_arn" {
   description = "API Gateway HTTP API execution ARN"
 }
 
