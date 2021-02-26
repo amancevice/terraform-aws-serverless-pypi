@@ -1,4 +1,4 @@
-output "bucket" {
+output "s3_bucket" {
   description = "PyPI S3 bucket"
   value       = aws_s3_bucket.pypi
 }
@@ -16,4 +16,9 @@ output "lambda_api" {
 output "lambda_reindex" {
   description = "Reindexer Lambda function"
   value       = aws_lambda_function.reindex
+}
+
+output "sns_topic" {
+  description = "Reindexer SNS topic"
+  value       = aws_sns_topic.reindex
 }
