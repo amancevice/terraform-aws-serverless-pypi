@@ -342,11 +342,3 @@ resource "aws_apigatewayv2_route" "proxy_head" {
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
-
-resource "aws_apigatewayv2_route" "proxy_post" {
-  api_id             = local.http_api.id
-  authorizer_id      = local.http_api.authorizer_id
-  route_key          = "POST /{proxy+}"
-  authorization_type = local.http_api.authorization_type
-  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
