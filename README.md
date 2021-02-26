@@ -13,49 +13,33 @@ Requests to the base path (eg, `/simple/`) will respond with the contents of an 
 
 Requests to the package index (eg, `/simple/fizz/`) will dynamically generate an HTML file based on the contents of keys under that namespace (eg, `s3://your-bucket/fizz/`). URLs for package downloads are presigned S3 URLs with a default lifespan of 15 minutes.
 
-Package uploads/removals on S3 will trigger a Lambda function that reindexes the bucket and generates a new `index.html`. This is done to save time when querying the base path when your bucket contains a multitude of packages.
+Package uploads/removals on S3 will trigger a Lambda function that reindexes the bucket and generates a new `index.html` at the root. This is done to save time when querying the base path when your bucket contains a multitude of packages.
 
 ![Serverless PyPI](./docs/serverless-pypi.png)
 
 ## Usage
 
-As of v2 users are expected to bring-your-own REST API instead of providing one inside the module. This gives users greater flexibility in choosing how their API is set up.
+As of v3 users are expected to bring-your-own HTTP (v2) API instead of providing one inside the module. This gives users greater flexibility in choosing how their API is set up.
 
-Users can deploy their API inside a VPC, for example, or attach this module to a resource inside a pre-existing API in a "monolithic" approach to API Gateway management.
-
-A very simple setup is as follows:
+The most simplistic setup is as follows:
 
 ```terraform
-resource "aws_api_gateway_rest_api" "pypi" {
-  name = "serverless-pypi"
+resource "aws_apigatewayv2_api" "pypi" {
+  name          = "pypi"
+  protocol_type = "HTTP"
 }
 
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
   version = "~> 3.0"
 
-  iam_role_name = "serverless-pypi-role"
-
-  api_id            = "<http-api-id>"
-  api_execution_arn = "<http-api-execution-arn>"
-
-  lambda_api_fallback_index_url = "https://pypi.org/simple/"
-  lambda_api_function_name      = "serverless-pypi-pypi-http-api"
-  lambda_api_tags               = { /**/ }
-
-  lambda_reindex_function_name = "serverless-pypi-pypi-reindex"
-  lambda_reindex_tags          = { /**/ }
-
-  log_group_api_retention_in_days     = 30
-  log_group_api_tags                  = { /**/ }
-  log_group_reindex_retention_in_days = 30
-  log_group_reindex_tags              = { /**/ }
-
-  s3_bucket_name = "serverless-pypi-bucket"
-  s3_bucket_tags = { /* … */ }
-
-  sns_topic_name = "serverless-pypi-s3-events"
-  sns_topic_tags = { /* … */ }
+  api_id                       = aws_apigatewayv2_api.pypi.id
+  api_execution_arn            = aws_apigatewayv2_api.pypi.execution_arn
+  iam_role_name                = "serverless-pypi-role"
+  lambda_api_function_name     = "serverless-pypi-api"
+  lambda_reindex_function_name = "serverless-pypi-reindex"
+  s3_bucket_name               = "serverless-pypi"
+  sns_topic_name               = "serverless-pypi"
 
   # etc …
 }
@@ -86,22 +70,22 @@ s3://your-bucket/
 
 You can configure your PyPI index to fall back to a different PyPI in the event that a package is not found in your bucket.
 
-Without configuring a fallback index URL the following `pip install` command might fail (assuming you don't have `boto3` and all its dependencies in your S3 bucket):
+Without configuring a fallback index URL the following `pip install` command will surely fail (assuming you don't have `boto3` and all its dependencies in your S3 bucket):
 
 ```bash
 pip install boto3 --index-url https://my.private.pypi/simple/
 ```
 
-If instead, you configure a fallback index URL in the terraform module, then requesting a pip that isn't found in the bucket will be re-routed to the fallback.
+Instead, if you configure a fallback index URL in the terraform module, then requests for a pip that isn't found in the bucket will be re-routed to the fallback.
 
 ```terraform
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 2.0"
+  version = "~> 3.0"
 
   lambda_api_fallback_index_url = "https://pypi.org/simple/"
 
-  # etc...
+  # etc …
 }
 ```
 
@@ -111,32 +95,28 @@ Please note that this tool provides **NO** authentication layer for your PyPI in
 
 ### Cognito Basic Auth
 
-I have provided a very simple authentication implementation using AWS Cognito and API Gateway authorizers.
+I have provided a _very_ simple authentication implementation using AWS Cognito and API Gateway authorizers.
 
 Add a Cognito-backed Basic authentication layer to your serverless PyPI with the `serverless-pypi-cognito` module:
-
-```terraform
-module "serverless_pypi_cognito" {
-  source  = "amancevice/serverless-pypi-cognito/aws"
-  version = "~> 1.0"
-
-  cognito_user_pool_name = "serverless-pypi-cognito-pool"
-  iam_role_name          = "serverless-pypi-authorizer-role"
-  lambda_function_name   = "serverless-pypi-authorizer"
-  rest_api_id            = aws_api_gateway_rest_api.pypi.id
-}
-```
-
-You will also need to update your serverless PyPI module with the authorizer ID and authorization strategy:
 
 ```terraform
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
   version = "~> 3.0"
 
-  rest_api_authorization = "CUSTOM"
-  rest_api_authorizer_id = module.serverless_pypi_cognito.rest_api_authorizer.id
+  api_authorization = "CUSTOM"
+  api_authorizer_id = module.serverless_pypi_cognito.api_authorizer.id
 
-  # etc …
+  # …
+}
+
+module "serverless_pypi_cognito" {
+  source  = "amancevice/serverless-pypi-cognito/aws"
+  version = "~> 2.0"
+
+  api_id                 = aws_apigatewayv2_api.pypi.id
+  cognito_user_pool_name = "serverless-pypi-cognito-pool"
+  iam_role_name          = module.serverless_pypi.iam_role.name
+  lambda_function_name   = "serverless-pypi-authorizer"
 }
 ```
