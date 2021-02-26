@@ -77,6 +77,11 @@ variable "lambda_api_tags" {
   default     = {}
 }
 
+variable "lambda_api_timeout" {
+  description = "Lambda function timeout"
+  default     = 3
+}
+
 variable "lambda_reindex_alias_name" {
   description = "Reindexer Lambda alias name"
   default     = "prod"
@@ -111,6 +116,11 @@ variable "lambda_reindex_tags" {
   description = "Resource tags"
   type        = map(string)
   default     = {}
+}
+
+variable "lambda_reindex_timeout" {
+  description = "Lambda function timeout"
+  default     = 3
 }
 
 variable "lambda_runtime" {

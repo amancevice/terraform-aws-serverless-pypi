@@ -39,6 +39,7 @@ locals {
     publish                = var.lambda_api_publish
     fallback_index_url     = var.lambda_api_fallback_index_url
     tags                   = var.lambda_api_tags
+    timeout                = var.lambda_api_timeout
   }
 
   lambda_reindex = {
@@ -49,6 +50,7 @@ locals {
     memory_size            = var.lambda_reindex_memory_size
     publish                = var.lambda_reindex_publish
     tags                   = var.lambda_reindex_tags
+    timeout                = var.lambda_reindex_timeout
   }
 
   log_group_api = {
@@ -228,6 +230,7 @@ resource "aws_lambda_function" "api" {
   runtime          = local.lambda.runtime
   source_code_hash = local.lambda.source_code_hash
   tags             = local.lambda_api.tags
+  timeout          = local.lambda_api.timeout
 
   environment {
     variables = {
@@ -272,6 +275,7 @@ resource "aws_lambda_function" "reindex" {
   runtime          = local.lambda.runtime
   source_code_hash = local.lambda.source_code_hash
   tags             = local.lambda_reindex.tags
+  timeout          = local.lambda_reindex.timeout
 
   environment {
     variables = {
