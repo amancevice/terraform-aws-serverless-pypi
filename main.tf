@@ -124,6 +124,7 @@ resource "aws_s3_bucket_notification" "reindex" {
   bucket = aws_s3_bucket.pypi.id
 
   topic {
+    id            = "python-sdist"
     filter_suffix = ".tar.gz"
     topic_arn     = aws_sns_topic.reindex.arn
 
@@ -134,6 +135,7 @@ resource "aws_s3_bucket_notification" "reindex" {
   }
 
   topic {
+    id            = "python-wheel"
     filter_suffix = ".whl"
     topic_arn     = aws_sns_topic.reindex.arn
 
