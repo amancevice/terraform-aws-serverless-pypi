@@ -132,6 +132,16 @@ resource "aws_s3_bucket_notification" "reindex" {
       "s3:ObjectRemoved:*",
     ]
   }
+
+  topic {
+    filter_suffix = ".whl"
+    topic_arn     = aws_sns_topic.reindex.arn
+
+    events = [
+      "s3:ObjectCreated:*",
+      "s3:ObjectRemoved:*",
+    ]
+  }
 }
 
 resource "aws_sns_topic" "reindex" {
