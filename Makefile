@@ -1,4 +1,4 @@
-REPO := cargometrics/serverless-pypi
+REPO := amancevice/serverless-pypi
 
 all: validate
 
