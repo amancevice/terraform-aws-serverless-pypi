@@ -31,7 +31,7 @@ resource "aws_apigatewayv2_api" "pypi" {
 
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 3.0"
+  version = "~> 4.0"
 
   api_id                       = aws_apigatewayv2_api.pypi.id
   api_execution_arn            = aws_apigatewayv2_api.pypi.execution_arn
