@@ -159,7 +159,7 @@ def reindex_bucket(event=None, context=None):
 
 def get_index():
     """
-    GET /{BASE_PATH}/
+    GET /
 
     :return dict: Response
     """
@@ -170,7 +170,7 @@ def get_index():
 
 def get_package_index(name):
     """
-    GET /{BASE_PATH}/<pkg>/
+    GET /<pkg>
 
     :param str name: Package name
     :return dict: Response
@@ -214,7 +214,7 @@ def get_package_index(name):
 
 def get_response(path, *_):
     """
-    GET /{BASE_PATH}/*
+    GET /*
 
     :param str path: Request path
     :return dict: Response
@@ -229,14 +229,13 @@ def get_response(path, *_):
 
 def head_response(path, *_):
     """
-    HEAD /{BASE_PATH}/*
+    HEAD /*
 
     :param str path: Request path
     :return dict: Response
     """
     res = get_response(path)
-    res['body'] = ''
-    res['headers']['Content-Length'] = 0
+    res.update(body='')
     return res
 
 
@@ -294,8 +293,8 @@ def proxy_reponse(body, content_type=None):
         'body': body,
         'statusCode': 200,
         'headers': {
-            'Content-Length': len(body),
-            'Content-Type': f'{content_type}; charset=UTF-8',
+            'content-length': len(body),
+            'content-type': f'{content_type}; charset=UTF-8',
         },
     }
     return res
@@ -321,8 +320,8 @@ def reject(status_code, **kwargs):
     """
     body = json.dumps(kwargs) if kwargs else ''
     headers = {
-        'Content-Length': len(body),
-        'Content-Type': 'application/json; charset=UTF-8',
+        'content-length': len(body),
+        'content-type': 'application/json; charset=UTF-8',
     }
     return dict(body=body, headers=headers, statusCode=status_code)
 
