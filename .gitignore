@@ -17,4 +17,3 @@ __pycache__/
 *.zip
 .terraform.lock.hcl
 coverage.xml
-!package.zip

@@ -2,6 +2,11 @@ terraform {
   required_version = "~> 1.0"
 
   required_providers {
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
+
     aws = {
       source  = "hashicorp/aws"
       version = "~> 3.0"
@@ -25,9 +30,9 @@ locals {
   }
 
   lambda = {
-    filename         = "${path.module}/package.zip"
+    filename         = data.archive_file.package.output_path
     runtime          = var.lambda_runtime
-    source_code_hash = filebase64sha256("${path.module}/package.zip")
+    source_code_hash = data.archive_file.package.output_base64sha256
   }
 
   lambda_api = {
@@ -215,6 +220,14 @@ resource "aws_iam_role_policy" "policy" {
   name   = local.iam_role.policy_name
   role   = aws_iam_role.role.id
   policy = data.aws_iam_policy_document.policy.json
+}
+
+# LAMBDA
+
+data "archive_file" "package" {
+  source_file = "${path.module}/index.py"
+  output_path = "${path.module}/package.zip"
+  type        = "zip"
 }
 
 # LAMBDA :: API PROXY
