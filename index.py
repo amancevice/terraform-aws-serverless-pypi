@@ -117,11 +117,11 @@ def proxy_request(event, context=None):
     Handle API Gateway proxy request.
     """
     # Get HTTP request method, path, and body
-    method, path, body = parse_payload(event)
+    method, package, body = parse_payload(event)
 
     # Get HTTP response
     try:
-        res = ROUTES[method](path, body)
+        res = ROUTES[method](package, body)
     except KeyError:
         res = reject(403, message='Forbidden')
 
@@ -212,7 +212,7 @@ def get_package_index(name):
     return proxy_reponse(body)
 
 
-def get_response(path, *_):
+def get_response(package, *_):
     """
     GET /*
 
@@ -220,21 +220,21 @@ def get_response(path, *_):
     :return dict: Response
     """
     # GET /
-    if path == '/':
+    if package is None:
         return get_index()
 
     # GET /*
-    return get_package_index(path.strip('/'))
+    return get_package_index(package)
 
 
-def head_response(path, *_):
+def head_response(package, *_):
     """
     HEAD /*
 
     :param str path: Request path
     :return dict: Response
     """
-    res = get_response(path)
+    res = get_response(package)
     res.update(body='')
     return res
 
@@ -244,13 +244,15 @@ def parse_payload(event):
     Get HTTP request method/path/body for v2 payloads.
     """
     routeKey = event.get('routeKey')
-    method, path = routeKey.split(' ')
+    pathParameters = event.get('pathParameters') or {}
+    package = pathParameters.get('package')
+    method, _ = routeKey.split(' ')
     body = event.get('body')
     logger.info(routeKey)
-    return (method, path, body)
+    return (method, package, body)
 
 
-def post_response(path, body):
+def post_response(package, body):
     """
     POST /
 
@@ -258,7 +260,7 @@ def post_response(path, body):
     :param str body: POST body
     :return dict: Response
     """
-    if path == '/':
+    if package is None:
         return search(body)
 
     return reject(403, message='Forbidden')
@@ -294,7 +296,7 @@ def proxy_reponse(body, content_type=None):
         'statusCode': 200,
         'headers': {
             'content-length': len(body),
-            'content-type': f'{content_type}; charset=UTF-8',
+            'content-type': f'{content_type}; charset=utf-8',
         },
     }
     return res
@@ -321,7 +323,7 @@ def reject(status_code, **kwargs):
     body = json.dumps(kwargs) if kwargs else ''
     headers = {
         'content-length': len(body),
-        'content-type': 'application/json; charset=UTF-8',
+        'content-type': 'application/json; charset=utf-8',
     }
     return dict(body=body, headers=headers, statusCode=status_code)
 

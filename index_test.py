@@ -47,7 +47,7 @@ def test_proxy_reponse():
         'statusCode': 200,
         'headers': {
             'content-length': len(body),
-            'content-type': 'text/html; charset=UTF-8',
+            'content-type': 'text/html; charset=utf-8',
         },
     }
     assert ret == exp
@@ -63,7 +63,7 @@ def test_get_index():
         'statusCode': 200,
         'headers': {
             'content-length': len(SIMPLE_INDEX),
-            'content-type': 'text/html; charset=UTF-8',
+            'content-type': 'text/html; charset=utf-8',
         },
     }
     assert ret == exp
@@ -78,7 +78,7 @@ def test_get_package_index():
         'statusCode': 200,
         'headers': {
             'content-length': len(PACKAGE_INDEX),
-            'content-type': 'text/html; charset=UTF-8',
+            'content-type': 'text/html; charset=utf-8',
         },
     }
     assert ret == exp
@@ -107,7 +107,7 @@ def test_get_package_index_not_found():
         'statusCode': 404,
         'headers': {
             'content-length': len(body),
-            'content-type': 'application/json; charset=UTF-8',
+            'content-type': 'application/json; charset=utf-8',
         },
     }
     assert ret == exp
@@ -127,7 +127,7 @@ def test_reject():
         'statusCode': 401,
         'headers': {
             'content-length': len(body),
-            'content-type': 'application/json; charset=UTF-8',
+            'content-type': 'application/json; charset=utf-8',
         },
     }
     assert ret == exp
@@ -141,7 +141,7 @@ def test_reject():
             'body': '',
             'headers': {
                 'content-length': 0,
-                'content-type': 'text/html; charset=UTF-8',
+                'content-type': 'text/html; charset=utf-8',
             },
         }
     ),
@@ -151,7 +151,10 @@ def test_handler_get_root(event, exp):
     assert ret == exp
 
 
-@pytest.mark.parametrize('event', [{'routeKey': 'GET /'}])
+@pytest.mark.parametrize('event', [
+    {'routeKey': 'GET /'},
+    {'routeKey': 'HEAD /'},
+])
 def test_proxy_request_get(event):
     with mock.patch('index.get_index') as mock_idx:
         mock_idx.return_value = index.proxy_reponse(SIMPLE_INDEX)
@@ -169,7 +172,9 @@ def test_proxy_reponse_post(event):
         mock_search.assert_called_once_with('<SEARCH_XML>')
 
 
-@pytest.mark.parametrize('event', [{'routeKey': 'GET /fizz'}])
+@pytest.mark.parametrize('event', [
+    {'routeKey': 'GET /fizz', 'pathParameters': {'package': 'fizz'}}
+])
 def test_proxy_request_get_package(event):
     with mock.patch('index.get_package_index') as mock_pkg:
         mock_pkg.return_value = index.proxy_reponse(PACKAGE_INDEX)
@@ -177,21 +182,19 @@ def test_proxy_request_get_package(event):
         mock_pkg.assert_called_once_with('fizz')
 
 
-@pytest.mark.parametrize(
-    ('route_key', 'status_code', 'msg'),
-    [
-        ('HEAD /fizz/buzz/jazz', 404, 'Not Found'),
-        ('GET /fizz/buzz/jazz', 404, 'Not Found'),
-        ('POST /fizz/buzz/jazz', 403, 'Forbidden'),
-        ('OPTIONS /fizz/buzz/jazz', 403, 'Forbidden'),
-    ],
-)
-def test_proxy_request_reject(route_key, status_code, msg):
-    event = dict(routeKey=route_key)
+@pytest.mark.parametrize(('event', 'status_code', 'msg'), [
+    (
+        {'routeKey': 'OPTIONS /fizz', 'pathParameters': {'package': 'fizz'}},
+        403, 'Forbidden',
+    ),
+    (
+        {'routeKey': 'POST /fizz', 'pathParameters': {'package': 'fizz'}},
+        403, 'Forbidden',
+    ),
+])
+def test_proxy_request_reject(event, status_code, msg):
     ret = index.proxy_request(event)
     exp = index.reject(status_code, message=msg)
-    if route_key.startswith('HEAD'):
-        exp.update(body='')
     assert ret == exp
 
 
@@ -262,7 +265,7 @@ def test_search(pip):
         'statusCode': 200,
         'headers': {
             'content-length': len(body),
-            'content-type': 'text/xml; charset=UTF-8',
+            'content-type': 'text/xml; charset=utf-8',
         },
     }
     assert ret == exp
