@@ -9,7 +9,7 @@ from xml.etree import ElementTree as xml
 import boto3
 
 S3 = boto3.client('s3')
-S3_BUCKET = os.getenv('S3_BUCKET', 'serverless-pypi')
+S3_BUCKET = os.environ['S3_BUCKET']
 S3_PAGINATOR = S3.get_paginator('list_objects')
 S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 
@@ -117,11 +117,11 @@ def proxy_request(event, context=None):
     Handle API Gateway proxy request.
     """
     # Get HTTP request method, path, and body
-    method, path, body = parse_payload(event)
+    method, package, body = parse_payload(event)
 
     # Get HTTP response
     try:
-        res = ROUTES[method](path, body)
+        res = ROUTES[method](package, body)
     except KeyError:
         res = reject(403, message='Forbidden')
 
@@ -159,7 +159,7 @@ def reindex_bucket(event=None, context=None):
 
 def get_index():
     """
-    GET /{BASE_PATH}/
+    GET /
 
     :return dict: Response
     """
@@ -170,7 +170,7 @@ def get_index():
 
 def get_package_index(name):
     """
-    GET /{BASE_PATH}/<pkg>/
+    GET /<pkg>
 
     :param str name: Package name
     :return dict: Response
@@ -212,31 +212,30 @@ def get_package_index(name):
     return proxy_reponse(body)
 
 
-def get_response(path, *_):
+def get_response(package, *_):
     """
-    GET /{BASE_PATH}/*
+    GET /*
 
     :param str path: Request path
     :return dict: Response
     """
     # GET /
-    if path == '/':
+    if package is None:
         return get_index()
 
     # GET /*
-    return get_package_index(path.strip('/'))
+    return get_package_index(package)
 
 
-def head_response(path, *_):
+def head_response(package, *_):
     """
-    HEAD /{BASE_PATH}/*
+    HEAD /*
 
     :param str path: Request path
     :return dict: Response
     """
-    res = get_response(path)
-    res['body'] = ''
-    res['headers']['Content-Length'] = 0
+    res = get_response(package)
+    res.update(body='')
     return res
 
 
@@ -244,16 +243,16 @@ def parse_payload(event):
     """
     Get HTTP request method/path/body for v2 payloads.
     """
-    requestContext = event.get('requestContext') or {}
-    http = requestContext.get('http') or {}
-    method = http.get('method')
-    path = http.get('path')
+    routeKey = event.get('routeKey')
+    pathParameters = event.get('pathParameters') or {}
+    package = pathParameters.get('package')
+    method, _ = routeKey.split(' ')
     body = event.get('body')
-    logger.info('%s %s', method, path)
-    return (method, path, body)
+    logger.info(routeKey)
+    return (method, package, body)
 
 
-def post_response(path, body):
+def post_response(package, body):
     """
     POST /
 
@@ -261,7 +260,7 @@ def post_response(path, body):
     :param str body: POST body
     :return dict: Response
     """
-    if path == '/':
+    if package is None:
         return search(body)
 
     return reject(403, message='Forbidden')
@@ -296,8 +295,8 @@ def proxy_reponse(body, content_type=None):
         'body': body,
         'statusCode': 200,
         'headers': {
-            'Content-Length': len(body),
-            'Content-Type': f'{content_type}; charset=UTF-8',
+            'content-length': len(body),
+            'content-type': f'{content_type}; charset=utf-8',
         },
     }
     return res
@@ -323,8 +322,8 @@ def reject(status_code, **kwargs):
     """
     body = json.dumps(kwargs) if kwargs else ''
     headers = {
-        'Content-Length': len(body),
-        'Content-Type': 'application/json; charset=UTF-8',
+        'content-length': len(body),
+        'content-type': 'application/json; charset=utf-8',
     }
     return dict(body=body, headers=headers, statusCode=status_code)
 

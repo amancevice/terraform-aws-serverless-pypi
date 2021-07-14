@@ -2,6 +2,11 @@ terraform {
   required_version = "~> 1.0"
 
   required_providers {
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
+
     aws = {
       source  = "hashicorp/aws"
       version = "~> 3.0"
@@ -25,9 +30,9 @@ locals {
   }
 
   lambda = {
-    filename         = "${path.module}/package.zip"
+    filename         = data.archive_file.package.output_path
     runtime          = var.lambda_runtime
-    source_code_hash = filebase64sha256("${path.module}/package.zip")
+    source_code_hash = data.archive_file.package.output_base64sha256
   }
 
   lambda_api = {
@@ -217,6 +222,14 @@ resource "aws_iam_role_policy" "policy" {
   policy = data.aws_iam_policy_document.policy.json
 }
 
+# LAMBDA
+
+data "archive_file" "package" {
+  source_file = "${path.module}/index.py"
+  output_path = "${path.module}/package.zip"
+  type        = "zip"
+}
+
 # LAMBDA :: API PROXY
 
 resource "aws_cloudwatch_log_group" "api" {
@@ -346,7 +359,7 @@ resource "aws_apigatewayv2_route" "root_post" {
 resource "aws_apigatewayv2_route" "proxy_get" {
   api_id             = local.http_api.id
   authorizer_id      = local.http_api.authorizer_id
-  route_key          = "GET /{proxy+}"
+  route_key          = "GET /{package}"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
@@ -354,7 +367,7 @@ resource "aws_apigatewayv2_route" "proxy_get" {
 resource "aws_apigatewayv2_route" "proxy_head" {
   api_id             = local.http_api.id
   authorizer_id      = local.http_api.authorizer_id
-  route_key          = "HEAD /{proxy+}"
+  route_key          = "HEAD /{package}"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
