@@ -9,7 +9,7 @@ from xml.etree import ElementTree as xml
 import boto3
 
 S3 = boto3.client('s3')
-S3_BUCKET = os.getenv('S3_BUCKET', 'serverless-pypi')
+S3_BUCKET = os.environ['S3_BUCKET']
 S3_PAGINATOR = S3.get_paginator('list_objects')
 S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
 
@@ -244,12 +244,10 @@ def parse_payload(event):
     """
     Get HTTP request method/path/body for v2 payloads.
     """
-    requestContext = event.get('requestContext') or {}
-    http = requestContext.get('http') or {}
-    method = http.get('method')
-    path = http.get('path')
+    routeKey = event.get('routeKey')
+    method, path = routeKey.split(' ')
     body = event.get('body')
-    logger.info('%s %s', method, path)
+    logger.info(routeKey)
     return (method, path, body)
 
 
