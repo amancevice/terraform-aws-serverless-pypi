@@ -31,7 +31,7 @@ resource "aws_apigatewayv2_api" "pypi" {
 
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 4.0"
+  version = "~> 4.1"
 
   api_id                       = aws_apigatewayv2_api.pypi.id
   api_execution_arn            = aws_apigatewayv2_api.pypi.execution_arn
@@ -81,7 +81,7 @@ Instead, if you configure a fallback index URL in the terraform module, then req
 ```terraform
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 3.0"
+  version = "~> 4.1"
 
   lambda_api_fallback_index_url = "https://pypi.org/simple/"
 
@@ -102,10 +102,10 @@ Add a Cognito-backed Basic authentication layer to your serverless PyPI with the
 ```terraform
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 3.0"
+  version = "~> 4.1"
 
-  api_authorization = "CUSTOM"
-  api_authorizer_id = module.serverless_pypi_cognito.api_authorizer.id
+  api_authorization_type = "CUSTOM"
+  api_authorizer_id      = module.serverless_pypi_cognito.api_authorizer.id
 
   # …
 }
