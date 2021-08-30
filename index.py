@@ -243,12 +243,13 @@ def parse_payload(event):
     """
     Get HTTP request method/path/body for v2 payloads.
     """
-    routeKey = event.get('routeKey')
-    pathParameters = event.get('pathParameters') or {}
-    package, *_ = pathParameters.get('package').split('/')
-    method, _ = routeKey.split(' ')
     body = event.get('body')
-    logger.info(routeKey)
+    routeKey = event.get('routeKey')
+    method, _ = routeKey.split(' ')
+    try:
+        package, *_ = event['pathParameters']['package'].split('/')
+    except KeyError:
+        package = None
     return (method, package, body)
 
 
