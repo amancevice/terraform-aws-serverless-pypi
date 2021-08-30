@@ -359,7 +359,7 @@ resource "aws_apigatewayv2_route" "root_post" {
 resource "aws_apigatewayv2_route" "proxy_get" {
   api_id             = local.http_api.id
   authorizer_id      = local.http_api.authorizer_id
-  route_key          = "GET /{package}"
+  route_key          = "GET /{package+}"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
@@ -367,7 +367,7 @@ resource "aws_apigatewayv2_route" "proxy_get" {
 resource "aws_apigatewayv2_route" "proxy_head" {
   api_id             = local.http_api.id
   authorizer_id      = local.http_api.authorizer_id
-  route_key          = "HEAD /{package}"
+  route_key          = "HEAD /{package+}"
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }

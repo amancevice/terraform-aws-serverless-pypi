@@ -245,7 +245,7 @@ def parse_payload(event):
     """
     routeKey = event.get('routeKey')
     pathParameters = event.get('pathParameters') or {}
-    package = pathParameters.get('package')
+    package, *_ = pathParameters.get('package').split('/')
     method, _ = routeKey.split(' ')
     body = event.get('body')
     logger.info(routeKey)
