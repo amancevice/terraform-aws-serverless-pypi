@@ -370,6 +370,7 @@ INDEX = MiniTemplate(
     <!DOCTYPE html>
     <html>
         <head>
+            <meta name="pypi:repository-version" content="1.0">
             <title>$title</title>
         </head>
         <body>
