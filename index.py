@@ -117,7 +117,10 @@ def proxy_request(event, context=None):
     Handle API Gateway proxy request.
     """
     # Get HTTP request method, path, and body
-    method, package, body = parse_payload(event)
+    if event.get('version') == '2.0':
+        method, package, body = parse_payload_v2(event)
+    else:
+        method, package, body = parse_payload_v1(event)
 
     # Get HTTP response
     try:
@@ -239,7 +242,20 @@ def head_response(package, *_):
     return res
 
 
-def parse_payload(event):
+def parse_payload_v1(event):
+    """
+    Get HTTP request method/path/body for v1 payloads.
+    """
+    body = event.get('body')
+    method = event.get('httpMethod')
+    try:
+        package, *_ = event['pathParameters']['package'].split('/')
+    except KeyError:
+        package = None
+    return (method, package, body)
+
+
+def parse_payload_v2(event):
     """
     Get HTTP request method/path/body for v2 payloads.
     """

@@ -135,7 +135,7 @@ def test_reject():
 
 @pytest.mark.parametrize(('event', 'exp'), [
     (
-        {'routeKey': 'GET /'},
+        {'version': '2.0', 'routeKey': 'GET /'},
         {
             'statusCode': 200,
             'body': '',
@@ -152,8 +152,10 @@ def test_handler_get_root(event, exp):
 
 
 @pytest.mark.parametrize('event', [
-    {'routeKey': 'GET /'},
-    {'routeKey': 'HEAD /'},
+    {'version': '2.0', 'routeKey': 'GET /'},
+    {'version': '2.0', 'routeKey': 'HEAD /'},
+    {'httpMethod': 'GET'},
+    {'httpMethod': 'HEAD'},
 ])
 def test_proxy_request_get(event):
     with mock.patch('index.get_index') as mock_idx:
@@ -163,7 +165,8 @@ def test_proxy_request_get(event):
 
 
 @pytest.mark.parametrize('event', [
-    {'body': '<SEARCH_XML>', 'routeKey': 'POST /'},
+    {'version': '2.0', 'routeKey': 'POST /', 'body': '<SEARCH_XML>'},
+    {'httpMethod': 'POST', 'body': '<SEARCH_XML>'},
 ])
 def test_proxy_reponse_post(event):
     with mock.patch('index.search') as mock_search:
@@ -173,7 +176,15 @@ def test_proxy_reponse_post(event):
 
 
 @pytest.mark.parametrize('event', [
-    {'routeKey': 'GET /fizz', 'pathParameters': {'package': 'fizz'}}
+    {
+        'version': '2.0',
+        'routeKey': 'GET /fizz',
+        'pathParameters': {'package': 'fizz'}
+    },
+    {
+        'httpMethod': 'GET',
+        'pathParameters': {'package': 'fizz'}
+    }
 ])
 def test_proxy_request_get_package(event):
     with mock.patch('index.get_package_index') as mock_pkg:
@@ -184,11 +195,19 @@ def test_proxy_request_get_package(event):
 
 @pytest.mark.parametrize(('event', 'status_code', 'msg'), [
     (
-        {'routeKey': 'OPTIONS /fizz', 'pathParameters': {'package': 'fizz'}},
+        {
+            'version': '2.0',
+            'routeKey': 'OPTIONS /fizz',
+            'pathParameters': {'package': 'fizz'}
+        },
         403, 'Forbidden',
     ),
     (
-        {'routeKey': 'POST /fizz', 'pathParameters': {'package': 'fizz'}},
+        {
+            'version': '2.0',
+            'routeKey': 'POST /fizz',
+            'pathParameters': {'package': 'fizz'}
+        },
         403, 'Forbidden',
     ),
 ])
