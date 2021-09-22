@@ -272,7 +272,6 @@ resource "aws_lambda_permission" "invoke_api" {
   principal     = "apigateway.amazonaws.com"
   qualifier     = aws_lambda_alias.api.name
   source_arn    = "${local.http_api.execution_arn}/*/*/*"
-  statement_id  = "InvokeAPI"
 }
 
 # LAMBDA :: REINDEXER
@@ -310,7 +309,6 @@ resource "aws_lambda_function" "reindex" {
 }
 
 resource "aws_lambda_permission" "reindex" {
-  statement_id  = "Reindex"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_alias.reindex.function_name
   principal     = "sns.amazonaws.com"
