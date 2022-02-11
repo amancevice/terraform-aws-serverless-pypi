@@ -9,7 +9,7 @@ terraform {
 
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 3.0"
+      version = "~> 4.0"
     }
   }
 }
@@ -83,9 +83,13 @@ locals {
 # S3 :: BUCKET
 
 resource "aws_s3_bucket" "pypi" {
-  acl    = "private"
   bucket = local.s3.bucket_name
   tags   = local.s3.bucket_tags
+}
+
+resource "aws_s3_bucket_acl" "pypi" {
+  bucket = aws_s3_bucket.pypi.id
+  acl    = "private"
 }
 
 resource "aws_s3_bucket_public_access_block" "pypi" {
