@@ -1,7 +1,7 @@
 # Serverless PyPI
 
 [![terraform](https://img.shields.io/github/v/tag/amancevice/terraform-aws-serverless-pypi?color=62f&label=version&logo=terraform&style=flat-square)](https://registry.terraform.io/modules/amancevice/serverless-pypi/aws)
-[![py.test](https://img.shields.io/github/workflow/status/amancevice/terraform-aws-serverless-pypi/py.test?logo=github&style=flat-square)](https://github.com/amancevice/terraform-aws-serverless-pypi/actions)
+[![test](https://github.com/amancevice/terraform-aws-serverless-pypi/actions/workflows/test.yml/badge.svg)](https://github.com/amancevice/terraform-aws-serverless-pypi/actions/workflows/test.yml)
 [![coverage](https://img.shields.io/codeclimate/coverage/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/test_coverage)
 [![maintainability](https://img.shields.io/codeclimate/maintainability/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/maintainability)
 
@@ -53,7 +53,7 @@ Packages should exist one level deep in the bucket where the prefix is the name 
 
 Example:
 
-```
+```plain
 s3://your-bucket/
 ├── index.html
 ├── my-cool-package/
