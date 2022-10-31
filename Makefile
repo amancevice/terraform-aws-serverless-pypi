@@ -1,23 +1,17 @@
-all: validate
+all: test validate
 
 clean:
 	rm -rf .terraform*
+	make -C python clean
 
-up: .env
-	pipenv run python -m lambda_gateway index.proxy_request
+test:
+	make -C python test
 
-validate: Pipfile.lock | .terraform
-	pipenv run pytest
+validate: | .terraform
 	terraform fmt -check
 	AWS_REGION=us-east-1 terraform validate
 
-.PHONY: all clean up validate
-
-.env:
-	touch $@
+.PHONY: test validate
 
 .terraform:
 	terraform init
-
-Pipfile.lock: Pipfile
-	pipenv install --dev

@@ -1,3 +1,7 @@
+#################
+#   TERRAFORM   #
+#################
+
 terraform {
   required_version = "~> 1.0"
 
@@ -13,6 +17,10 @@ terraform {
     }
   }
 }
+
+##############
+#   LOCALS   #
+##############
 
 locals {
   http_api = {
@@ -80,7 +88,9 @@ locals {
   }
 }
 
-# S3 :: BUCKET
+####################
+#   S3 :: BUCKET   #
+####################
 
 resource "aws_s3_bucket" "pypi" {
   bucket = local.s3.bucket_name
@@ -100,7 +110,17 @@ resource "aws_s3_bucket_public_access_block" "pypi" {
   restrict_public_buckets = true
 }
 
-# S3 :: EVENTS
+resource "aws_s3_object" "index" {
+  bucket = aws_s3_bucket.pypi.id
+  key    = "index.html"
+  source = "${path.module}/index.html"
+
+  lifecycle { ignore_changes = [content] }
+}
+
+####################
+#   S3 :: EVENTS   #
+####################
 
 data "aws_caller_identity" "current" {
 }
@@ -134,24 +154,16 @@ resource "aws_s3_bucket_notification" "reindex" {
 
   topic {
     id            = "python-sdist"
+    events        = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
     filter_suffix = ".tar.gz"
     topic_arn     = aws_sns_topic.reindex.arn
-
-    events = [
-      "s3:ObjectCreated:*",
-      "s3:ObjectRemoved:*",
-    ]
   }
 
   topic {
     id            = "python-wheel"
+    events        = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
     filter_suffix = ".whl"
     topic_arn     = aws_sns_topic.reindex.arn
-
-    events = [
-      "s3:ObjectCreated:*",
-      "s3:ObjectRemoved:*",
-    ]
   }
 }
 
@@ -167,7 +179,9 @@ resource "aws_sns_topic_subscription" "reindex" {
   topic_arn = aws_sns_topic.reindex.arn
 }
 
-# IAM
+###########
+#   IAM   #
+###########
 
 data "aws_iam_policy_document" "assume_role" {
   statement {
@@ -182,21 +196,19 @@ data "aws_iam_policy_document" "assume_role" {
 
 data "aws_iam_policy_document" "policy" {
   statement {
-    sid = "ReadS3"
-
-    actions = [
-      "s3:Get*",
-      "s3:List*",
-    ]
-
-    resources = [
-      "arn:aws:s3:::${aws_s3_bucket.pypi.bucket}",
-      "arn:aws:s3:::${aws_s3_bucket.pypi.bucket}/*",
-    ]
+    sid       = "ListBucket"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.pypi.arn]
   }
 
   statement {
-    sid       = "ReindexS3"
+    sid       = "GetObjects"
+    actions   = ["s3:GetObject"]
+    resources = ["${aws_s3_bucket.pypi.arn}/*"]
+  }
+
+  statement {
+    sid       = "PutIndex"
     actions   = ["s3:PutObject"]
     resources = ["${aws_s3_bucket.pypi.arn}/index.html"]
   }
@@ -218,23 +230,26 @@ resource "aws_iam_role" "role" {
   description        = local.iam_role.description
   name               = local.iam_role.name
   tags               = local.iam_role.tags
+
+  inline_policy {
+    name   = local.iam_role.policy_name
+    policy = data.aws_iam_policy_document.policy.json
+  }
 }
 
-resource "aws_iam_role_policy" "policy" {
-  name   = local.iam_role.policy_name
-  role   = aws_iam_role.role.id
-  policy = data.aws_iam_policy_document.policy.json
-}
-
-# LAMBDA
+##############
+#   LAMBDA   #
+##############
 
 data "archive_file" "package" {
-  source_file = "${path.module}/index.py"
-  output_path = "${path.module}/package.zip"
+  source_file = "${path.module}/python/index.py"
+  output_path = "${path.module}/python/package.zip"
   type        = "zip"
 }
 
-# LAMBDA :: API PROXY
+###########################
+#   LAMBDA :: API PROXY   #
+###########################
 
 resource "aws_cloudwatch_log_group" "api" {
   name              = "/aws/lambda/${aws_lambda_function.api.function_name}"
@@ -278,7 +293,9 @@ resource "aws_lambda_permission" "invoke_api" {
   source_arn    = "${local.http_api.execution_arn}/*/*/*"
 }
 
-# LAMBDA :: REINDEXER
+###########################
+#   LAMBDA :: REINDEXER   #
+###########################
 
 resource "aws_cloudwatch_log_group" "reindex" {
   name              = "/aws/lambda/${aws_lambda_function.reindex.function_name}"
@@ -320,7 +337,9 @@ resource "aws_lambda_permission" "reindex" {
   source_arn    = aws_sns_topic.reindex.arn
 }
 
-# API GATEWAY :: HTTP INTEGRATIONS
+########################################
+#   API GATEWAY :: HTTP INTEGRATIONS   #
+########################################
 
 resource "aws_apigatewayv2_integration" "lambda" {
   api_id                 = local.http_api.id
@@ -332,44 +351,22 @@ resource "aws_apigatewayv2_integration" "lambda" {
   payload_format_version = "2.0"
 }
 
-# API GATEWAY :: HTTP ROUTES
+##################################
+#   API GATEWAY :: HTTP ROUTES   #
+##################################
 
-resource "aws_apigatewayv2_route" "root_get" {
+resource "aws_apigatewayv2_route" "routes" {
+  for_each = toset([
+    "GET /",
+    "HEAD /",
+    "POST /",
+    "GET /{package+}",
+    "HEAD /{package+}",
+  ])
+
   api_id             = local.http_api.id
   authorizer_id      = local.http_api.authorizer_id
-  route_key          = "GET /"
-  authorization_type = local.http_api.authorization_type
-  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
-resource "aws_apigatewayv2_route" "root_head" {
-  api_id             = local.http_api.id
-  authorizer_id      = local.http_api.authorizer_id
-  route_key          = "HEAD /"
-  authorization_type = local.http_api.authorization_type
-  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
-resource "aws_apigatewayv2_route" "root_post" {
-  api_id             = local.http_api.id
-  authorizer_id      = local.http_api.authorizer_id
-  route_key          = "POST /"
-  authorization_type = local.http_api.authorization_type
-  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
-resource "aws_apigatewayv2_route" "proxy_get" {
-  api_id             = local.http_api.id
-  authorizer_id      = local.http_api.authorizer_id
-  route_key          = "GET /{package+}"
-  authorization_type = local.http_api.authorization_type
-  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
-
-resource "aws_apigatewayv2_route" "proxy_head" {
-  api_id             = local.http_api.id
-  authorizer_id      = local.http_api.authorizer_id
-  route_key          = "HEAD /{package+}"
+  route_key          = each.value
   authorization_type = local.http_api.authorization_type
   target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }

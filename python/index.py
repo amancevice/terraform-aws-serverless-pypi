@@ -8,14 +8,14 @@ from xml.etree import ElementTree as xml
 
 import boto3
 
-S3 = boto3.client('s3')
-S3_BUCKET = os.environ['S3_BUCKET']
-S3_PAGINATOR = S3.get_paginator('list_objects')
-S3_PRESIGNED_URL_TTL = int(os.getenv('S3_PRESIGNED_URL_TTL', '900'))
+S3 = boto3.client("s3")
+S3_BUCKET = os.environ["S3_BUCKET"]
+S3_PAGINATOR = S3.get_paginator("list_objects")
+S3_PRESIGNED_URL_TTL = int(os.getenv("S3_PRESIGNED_URL_TTL", "900"))
 
-FALLBACK_INDEX_URL = os.getenv('FALLBACK_INDEX_URL')
-LOG_LEVEL = os.getenv('LOG_LEVEL') or 'INFO'
-LOG_FORMAT = os.getenv('LOG_FORMAT') or '%(levelname)s %(reqid)s %(message)s'
+FALLBACK_INDEX_URL = os.getenv("FALLBACK_INDEX_URL")
+LOG_LEVEL = os.getenv("LOG_LEVEL") or "INFO"
+LOG_FORMAT = os.getenv("LOG_FORMAT") or "%(levelname)s %(reqid)s %(message)s"
 
 
 class SuppressFilter(logging.Filter):
@@ -24,6 +24,7 @@ class SuppressFilter(logging.Filter):
 
     Taken from ``aws_lambda_powertools.logging.filters.SuppressFilter``
     """
+
     def __init__(self, logger):
         self.logger = logger
 
@@ -36,6 +37,7 @@ class LambdaLoggerAdapter(logging.LoggerAdapter):
     """
     Lambda logger adapter.
     """
+
     def __init__(self, name, level=None, format_string=None):
         # Get logger, formatter
         logger = logging.getLogger(name)
@@ -56,7 +58,7 @@ class LambdaLoggerAdapter(logging.LoggerAdapter):
             handler.addFilter(logFilter)
 
         # Initialize adapter with null RequestId
-        super().__init__(logger, dict(reqid='-'))
+        super().__init__(logger, dict(reqid="-"))
 
     def attach(self, handler):
         """
@@ -76,15 +78,17 @@ class LambdaLoggerAdapter(logging.LoggerAdapter):
         >>> # => INFO RequestId: {awsRequestId} Hello, world!
         >>> # => INFO RequestId: {awsRequestId} RETURN {"ok": True}
         """
+
         def wrapper(event=None, context=None):
             try:
                 self.addContext(context)
-                self.info('EVENT %s', json.dumps(event, default=str))
+                self.info("EVENT %s", json.dumps(event, default=str))
                 result = handler(event, context)
-                self.info('RETURN %s', json.dumps(result, default=str))
+                self.info("RETURN %s", json.dumps(result, default=str))
                 return result
             finally:
                 self.dropContext()
+
         return wrapper
 
     def addContext(self, context=None):
@@ -92,9 +96,9 @@ class LambdaLoggerAdapter(logging.LoggerAdapter):
         Add runtime context to logger.
         """
         try:
-            reqid = f'RequestId: {context.aws_request_id}'
+            reqid = f"RequestId: {context.aws_request_id}"
         except AttributeError:
-            reqid = '-'
+            reqid = "-"
         self.extra.update(reqid=reqid)
         return self
 
@@ -102,14 +106,15 @@ class LambdaLoggerAdapter(logging.LoggerAdapter):
         """
         Drop runtime context from logger.
         """
-        self.extra.update(reqid='-')
+        self.extra.update(reqid="-")
         return self
 
 
-logger = LambdaLoggerAdapter('PyPI')
+logger = LambdaLoggerAdapter("PyPI")
 
 
 # LAMBDA HANDLERS
+
 
 @logger.attach
 def proxy_request(event, context=None):
@@ -117,7 +122,7 @@ def proxy_request(event, context=None):
     Handle API Gateway proxy request.
     """
     # Get HTTP request method, path, and body
-    if event.get('version') == '2.0':
+    if event.get("version") == "2.0":
         method, package, body = parse_payload_v2(event)
     else:
         method, package, body = parse_payload_v1(event)
@@ -126,10 +131,10 @@ def proxy_request(event, context=None):
     try:
         res = ROUTES[method](package, body)
     except KeyError:
-        res = reject(403, message='Forbidden')
+        res = reject(403, message="Forbidden")
 
     # Return proxy response
-    logger.info('RESPONSE [%s]', res['statusCode'])
+    logger.info("RESPONSE [%s]", res["statusCode"])
     return res
 
 
@@ -139,26 +144,24 @@ def reindex_bucket(event=None, context=None):
     Reindex S3 bucket.
     """
     # Get package names from common prefixes
-    pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Delimiter='/')
+    pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Delimiter="/")
     pkgs = (
-        x.get('Prefix').strip('/')
+        x.get("Prefix").strip("/")
         for page in pages
-        for x in page.get('CommonPrefixes', [])
+        for x in page.get("CommonPrefixes", [])
     )
 
     # Construct HTML
     anchors = (ANCHOR.safe_substitute(href=pkg, name=pkg) for pkg in pkgs)
-    body = INDEX.safe_substitute(
-        title='Simple index',
-        anchors=''.join(anchors)
-    )
+    body = INDEX.safe_substitute(title="Simple index", anchors="".join(anchors))
 
     # Upload to S3 as index.html
-    res = S3.put_object(Bucket=S3_BUCKET, Key='index.html', Body=body.encode())
+    res = S3.put_object(Bucket=S3_BUCKET, Key="index.html", Body=body.encode())
     return res
 
 
 # LAMBDA HELPERS
+
 
 def get_index():
     """
@@ -166,8 +169,8 @@ def get_index():
 
     :return dict: Response
     """
-    index = S3.get_object(Bucket=S3_BUCKET, Key='index.html')
-    body = index['Body'].read().decode()
+    index = S3.get_object(Bucket=S3_BUCKET, Key="index.html")
+    body = index["Body"].read().decode()
     return proxy_reponse(body)
 
 
@@ -179,21 +182,17 @@ def get_package_index(name):
     :return dict: Response
     """
     # Get keys for given package
-    pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Prefix=f'{name}/')
-    keys = [
-        key.get('Key')
-        for page in pages
-        for key in page.get('Contents') or []
-    ]
+    pages = S3_PAGINATOR.paginate(Bucket=S3_BUCKET, Prefix=f"{name}/")
+    keys = [key.get("Key") for page in pages for key in page.get("Contents") or []]
 
     # Go to fallback index if no keys
     if FALLBACK_INDEX_URL and not any(keys):
-        fallback_url = os.path.join(FALLBACK_INDEX_URL, name, '')
+        fallback_url = os.path.join(FALLBACK_INDEX_URL, name, "")
         return redirect(fallback_url)
 
     # Respond with 404 if no keys and no fallback index
     elif not any(keys):
-        return reject(404, message='Not Found')
+        return reject(404, message="Not Found")
 
     # Convert keys to presigned URLs
     hrefs = [presign(key) for key in keys]
@@ -203,13 +202,9 @@ def get_package_index(name):
 
     # Construct HTML
     anchors = [
-        ANCHOR.safe_substitute(href=href, name=name)
-        for href, name in zip(hrefs, names)
+        ANCHOR.safe_substitute(href=href, name=name) for href, name in zip(hrefs, names)
     ]
-    body = INDEX.safe_substitute(
-        title=f'Links for {name}',
-        anchors=''.join(anchors)
-    )
+    body = INDEX.safe_substitute(title=f"Links for {name}", anchors="".join(anchors))
 
     # Convert to Lambda proxy response
     return proxy_reponse(body)
@@ -238,7 +233,7 @@ def head_response(package, *_):
     :return dict: Response
     """
     res = get_response(package)
-    res.update(body='')
+    res.update(body="")
     return res
 
 
@@ -246,10 +241,10 @@ def parse_payload_v1(event):
     """
     Get HTTP request method/path/body for v1 payloads.
     """
-    body = event.get('body')
-    method = event.get('httpMethod')
+    body = event.get("body")
+    method = event.get("httpMethod")
     try:
-        package, *_ = event['pathParameters']['package'].split('/')
+        package, *_ = event["pathParameters"]["package"].split("/")
     except KeyError:
         package = None
     return (method, package, body)
@@ -259,11 +254,11 @@ def parse_payload_v2(event):
     """
     Get HTTP request method/path/body for v2 payloads.
     """
-    body = event.get('body')
-    routeKey = event.get('routeKey')
-    method, _ = routeKey.split(' ')
+    body = event.get("body")
+    routeKey = event.get("routeKey")
+    method, _ = routeKey.split(" ")
     try:
-        package, *_ = event['pathParameters']['package'].split('/')
+        package, *_ = event["pathParameters"]["package"].split("/")
     except KeyError:
         package = None
     return (method, package, body)
@@ -280,7 +275,7 @@ def post_response(package, body):
     if package is None:
         return search(body)
 
-    return reject(403, message='Forbidden')
+    return reject(403, message="Forbidden")
 
 
 def presign(key):
@@ -291,9 +286,9 @@ def presign(key):
     :return str: Presigned URL
     """
     url = S3.generate_presigned_url(
-        'get_object',
+        "get_object",
         ExpiresIn=S3_PRESIGNED_URL_TTL,
-        HttpMethod='GET',
+        HttpMethod="GET",
         Params=dict(Bucket=S3_BUCKET, Key=key),
     )
     return url
@@ -306,14 +301,14 @@ def proxy_reponse(body, content_type=None):
     :param str body: HTML body
     :return dict: API Gateway Lambda proxy response
     """
-    content_type = content_type or 'text/html'
+    content_type = content_type or "text/html"
     # Wrap HTML in proxy response object
     res = {
-        'body': body,
-        'statusCode': 200,
-        'headers': {
-            'content-length': len(body),
-            'content-type': f'{content_type}; charset=utf-8',
+        "body": body,
+        "statusCode": 200,
+        "headers": {
+            "content-length": len(body),
+            "content-type": f"{content_type}; charset=utf-8",
         },
     }
     return res
@@ -326,7 +321,7 @@ def redirect(path):
     :param str path: Rejection status code
     :return dict: Redirection response
     """
-    return dict(statusCode=301, headers={'Location': path})
+    return dict(statusCode=301, headers={"Location": path})
 
 
 def reject(status_code, **kwargs):
@@ -337,10 +332,10 @@ def reject(status_code, **kwargs):
     :param dict kwargs: Rejection body JSON
     :return dict: Rejection response
     """
-    body = json.dumps(kwargs) if kwargs else ''
+    body = json.dumps(kwargs) if kwargs else ""
     headers = {
-        'content-length': len(body),
-        'content-type': 'application/json; charset=utf-8',
+        "content-length": len(body),
+        "content-type": "application/json; charset=utf-8",
     }
     return dict(body=body, headers=headers, statusCode=status_code)
 
@@ -353,37 +348,37 @@ def search(request):
     :return str: XML response
     """
     tree = xml.fromstring(request)
-    term = tree.find('.//string').text  # TODO this is not ideal
+    term = tree.find(".//string").text  # TODO this is not ideal
 
     hits = {}
     for page in S3_PAGINATOR.paginate(Bucket=S3_BUCKET):
-        for obj in page.get('Contents'):
-            key = obj.get('Key')
-            if term in key and 'index.html' != key:
-                *_, name, tarball = key.split('/')
-                _, version = tarball.replace('.tar.gz', '').split(f'{name}-')
+        for obj in page.get("Contents"):
+            key = obj.get("Key")
+            if term in key and "index.html" != key:
+                *_, name, tarball = key.split("/")
+                _, version = tarball.replace(".tar.gz", "").split(f"{name}-")
                 version = StrictVersion(version)
-                if name not in hits or hits[name]['version'] < version:
+                if name not in hits or hits[name]["version"] < version:
                     hits[name] = dict(
                         name=name,
                         version=version,
-                        summary=f's3://{S3_BUCKET}/{key}',
+                        summary=f"s3://{S3_BUCKET}/{key}",
                     )
     data = [SEARCH_VALUE.safe_substitute(**x) for x in hits.values()]
-    body = SEARCH.safe_substitute(data=''.join(data))
-    resp = proxy_reponse(body, 'text/xml')
+    body = SEARCH.safe_substitute(data="".join(data))
+    resp = proxy_reponse(body, "text/xml")
     return resp
 
 
 class MiniTemplate(Template):
     def __init__(self, template):
-        super().__init__(re.sub(r'\n *', '', template))
+        super().__init__(re.sub(r"\n *", "", template))
 
 
 ROUTES = dict(GET=get_response, HEAD=head_response, POST=post_response)
 ANCHOR = MiniTemplate('<a href="$href">$name</a><br>')
 INDEX = MiniTemplate(
-    '''
+    """
     <!DOCTYPE html>
     <html>
         <head>
@@ -395,10 +390,10 @@ INDEX = MiniTemplate(
             $anchors
         </body>
     </html>
-    '''
+    """
 )
 SEARCH = MiniTemplate(
-    '''
+    """
     <?xml version='1.0'?>
     <methodResponse>
         <params>
@@ -411,10 +406,10 @@ SEARCH = MiniTemplate(
             </param>
         </params>
     </methodResponse>
-    '''
+    """
 )
 SEARCH_VALUE = MiniTemplate(
-    '''
+    """
     <struct>
         <member>
             <name>name</name>
@@ -441,5 +436,5 @@ SEARCH_VALUE = MiniTemplate(
             </value>
         </member>
     </struct>
-    '''
+    """
 )
