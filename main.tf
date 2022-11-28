@@ -264,6 +264,7 @@ resource "aws_lambda_alias" "api" {
 }
 
 resource "aws_lambda_function" "api" {
+  architectures    = ["arm64"]
   description      = local.lambda_api.description
   filename         = local.lambda.filename
   function_name    = local.lambda_api.function_name
@@ -310,6 +311,7 @@ resource "aws_lambda_alias" "reindex" {
 }
 
 resource "aws_lambda_function" "reindex" {
+  architectures    = ["arm64"]
   description      = local.lambda_reindex.description
   filename         = local.lambda.filename
   function_name    = local.lambda_reindex.function_name
