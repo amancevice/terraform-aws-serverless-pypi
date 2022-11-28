@@ -13,5 +13,5 @@ up: .env
 .PHONY: all clean test up
 
 .venv: Pipfile
-	mkdir $@
+	mkdir -p $@
 	pipenv install --dev
