@@ -12,6 +12,8 @@ up: .env
 
 .PHONY: all clean test up
 
-.venv: Pipfile
+Pipfile.lock: Pipfile
+.venv: Pipfile.lock
 	mkdir -p $@
 	pipenv install --dev
+	touch $@
