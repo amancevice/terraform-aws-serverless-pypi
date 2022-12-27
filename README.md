@@ -1,7 +1,7 @@
 # Serverless PyPI
 
 [![terraform](https://img.shields.io/github/v/tag/amancevice/terraform-aws-serverless-pypi?color=62f&label=version&logo=terraform&style=flat-square)](https://registry.terraform.io/modules/amancevice/serverless-pypi/aws)
-[![test](https://github.com/amancevice/terraform-aws-serverless-pypi/actions/workflows/test.yml/badge.svg)](https://github.com/amancevice/terraform-aws-serverless-pypi/actions/workflows/test.yml)
+[![test](https://img.shields.io/github/actions/workflow/status/amancevice/terraform-aws-serverless-pypi/test.yml?logo=github&style=flat-square)](https://github.com/amancevice/terraform-aws-serverless-pypi/actions/workflows/test.yml)
 [![coverage](https://img.shields.io/codeclimate/coverage/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/test_coverage)
 [![maintainability](https://img.shields.io/codeclimate/maintainability/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/maintainability)
 
