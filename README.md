@@ -5,6 +5,8 @@
 [![coverage](https://img.shields.io/codeclimate/coverage/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/test_coverage)
 [![maintainability](https://img.shields.io/codeclimate/maintainability/amancevice/terraform-aws-serverless-pypi?logo=code-climate&style=flat-square)](https://codeclimate.com/github/amancevice/terraform-aws-serverless-pypi/maintainability)
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/smallweirdnumber)
+
 S3-backed serverless PyPI.
 
 Requests to your PyPI server will be proxied through a Lambda function that pulls content from an S3 bucket and responds with the same HTML content that you might find in a conventional PyPI server.
