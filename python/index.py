@@ -244,7 +244,7 @@ def parse_payload_v1(event):
     method = event.get("httpMethod")
     try:
         package, *_ = event["pathParameters"]["package"].split("/")
-    except KeyError:
+    except (KeyError, TypeError):
         package = None
     return (method, package, body)
 
