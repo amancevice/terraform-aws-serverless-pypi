@@ -23,13 +23,6 @@ terraform {
 ##############
 
 locals {
-  http_api = {
-    authorization_type = var.api_authorization_type
-    authorizer_id      = var.api_authorizer_id
-    execution_arn      = var.api_execution_arn
-    id                 = var.api_id
-  }
-
   iam_role = {
     description = var.iam_role_description
     name        = var.iam_role_name
@@ -74,6 +67,22 @@ locals {
   log_group_reindex = {
     retention_in_days = var.log_group_reindex_retention_in_days
     tags              = var.log_group_reindex_tags
+  }
+
+  rest_api = {
+    authorization_type = var.api_authorization_type
+    authorizer_id      = var.api_authorizer_id
+    execution_arn      = var.api_execution_arn
+    id                 = var.api_id
+    root_resource_id   = var.api_root_resource_id
+  }
+
+  routes = {
+    "GET /"            = { http_method : "GET", resource_id : local.rest_api.root_resource_id }
+    "HEAD /"           = { http_method : "HEAD", resource_id : local.rest_api.root_resource_id }
+    "POST /"           = { http_method : "POST", resource_id : local.rest_api.root_resource_id }
+    "GET /{package+}"  = { http_method : "GET", resource_id : aws_api_gateway_resource.proxy.id }
+    "HEAD /{package+}" = { http_method : "HEAD", resource_id : aws_api_gateway_resource.proxy.id }
   }
 
   s3 = {
@@ -251,14 +260,25 @@ resource "aws_iam_role" "role" {
   }
 }
 
-##############
-#   LAMBDA   #
-##############
+#########################
+#   LAMBDA :: PACKAGE   #
+#########################
 
 data "archive_file" "package" {
-  source_file = "${path.module}/python/index.py"
+  source_dir  = "${path.module}/python"
   output_path = "${path.module}/python/package.zip"
   type        = "zip"
+
+  excludes = [
+    ".venv",
+    "Makefile",
+    "Pipfile",
+    "Pipfile.lock",
+    "index_test.py",
+    "package.zip",
+    "pyproject.toml",
+    "requirements.txt",
+  ]
 }
 
 ###########################
@@ -305,7 +325,7 @@ resource "aws_lambda_permission" "invoke_api" {
   function_name = aws_lambda_alias.api.function_name
   principal     = "apigateway.amazonaws.com"
   qualifier     = aws_lambda_alias.api.name
-  source_arn    = "${local.http_api.execution_arn}/*/*/*"
+  source_arn    = "${local.rest_api.execution_arn}/*/*/*"
 }
 
 ###########################
@@ -353,36 +373,32 @@ resource "aws_lambda_permission" "reindex" {
   source_arn    = aws_sns_topic.reindex.arn
 }
 
-########################################
-#   API GATEWAY :: HTTP INTEGRATIONS   #
-########################################
+###########################
+#   API GATEWAY :: REST   #
+###########################
 
-resource "aws_apigatewayv2_integration" "lambda" {
-  api_id                 = local.http_api.id
-  connection_type        = "INTERNET"
-  description            = "PyPI proxy handler"
-  integration_method     = "POST"
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_alias.api.invoke_arn
-  payload_format_version = "2.0"
+resource "aws_api_gateway_resource" "proxy" {
+  rest_api_id = local.rest_api.id
+  parent_id   = local.rest_api.root_resource_id
+  path_part   = "{package+}"
 }
 
-##################################
-#   API GATEWAY :: HTTP ROUTES   #
-##################################
+resource "aws_api_gateway_method" "methods" {
+  for_each      = local.routes
+  authorization = local.rest_api.authorization_type
+  authorizer_id = local.rest_api.authorizer_id
+  http_method   = each.value.http_method
+  resource_id   = each.value.resource_id
+  rest_api_id   = local.rest_api.id
+}
 
-resource "aws_apigatewayv2_route" "routes" {
-  for_each = toset([
-    "GET /",
-    "HEAD /",
-    "POST /",
-    "GET /{package+}",
-    "HEAD /{package+}",
-  ])
-
-  api_id             = local.http_api.id
-  authorizer_id      = local.http_api.authorizer_id
-  route_key          = each.value
-  authorization_type = local.http_api.authorization_type
-  target             = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+resource "aws_api_gateway_integration" "integrations" {
+  depends_on              = [aws_api_gateway_method.methods]
+  for_each                = local.routes
+  rest_api_id             = local.rest_api.id
+  resource_id             = each.value.resource_id
+  http_method             = each.value.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_alias.api.invoke_arn
 }

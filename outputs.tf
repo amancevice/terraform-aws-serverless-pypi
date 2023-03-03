@@ -1,3 +1,28 @@
+output "api_deployment_trigger" {
+  description = "API Gateway deployment trigger"
+
+  value = sha1(jsonencode(concat(
+    [aws_api_gateway_resource.proxy.id],
+    [for x in aws_api_gateway_integration.integrations : x.id],
+    [for x in aws_api_gateway_method.methods : x.id],
+  )))
+}
+
+output "api_integrations" {
+  description = "API Gateway integrations"
+  value       = aws_api_gateway_integration.integrations
+}
+
+output "api_methods" {
+  description = "API Gateway methods"
+  value       = aws_api_gateway_method.methods
+}
+
+output "api_resources" {
+  description = "API Gateway resources"
+  value       = [aws_api_gateway_resource.proxy]
+}
+
 output "s3_bucket" {
   description = "PyPI S3 bucket"
   value       = aws_s3_bucket.pypi

@@ -1,19 +1,23 @@
 variable "api_authorization_type" {
-  description = "API Gateway HTTP API routes authorization type"
+  description = "API Gateway REST API routes authorization type"
   default     = "NONE"
 }
 
 variable "api_authorizer_id" {
-  description = "API Gateway HTTP API routes authorizer ID"
+  description = "API Gateway REST API routes authorizer ID"
   default     = null
 }
 
 variable "api_id" {
-  description = "API Gateway HTTP API ID"
+  description = "API Gateway REST API ID"
 }
 
 variable "api_execution_arn" {
-  description = "API Gateway HTTP API execution ARN"
+  description = "API Gateway REST API execution ARN"
+}
+
+variable "api_root_resource_id" {
+  description = "API Gateway REST API root resource ID"
 }
 
 variable "iam_role_description" {

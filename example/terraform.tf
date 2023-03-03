@@ -32,36 +32,25 @@ provider "aws" {
 #   API GATEWAY  #
 ##################
 
-resource "aws_apigatewayv2_api" "pypi" {
-  description   = "Serverless PyPI example"
-  name          = "serverless-pypi"
-  protocol_type = "HTTP"
+resource "aws_api_gateway_rest_api" "pypi" {
+  description = "Serverless PyPI example"
+  name        = "serverless-pypi"
+
+  endpoint_configuration { types = ["REGIONAL"] }
 }
 
-resource "aws_apigatewayv2_stage" "default" {
-  api_id      = aws_apigatewayv2_api.pypi.id
-  auto_deploy = true
-  name        = "simple"
+resource "aws_api_gateway_deployment" "pypi" {
+  rest_api_id = aws_api_gateway_rest_api.pypi.id
 
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.api_logs.arn
+  triggers = { redeployment = module.serverless_pypi.api_deployment_trigger }
 
-    format = jsonencode({
-      httpMethod     = "$context.httpMethod"
-      ip             = "$context.identity.sourceIp"
-      protocol       = "$context.protocol"
-      requestId      = "$context.requestId"
-      requestTime    = "$context.requestTime"
-      responseLength = "$context.responseLength"
-      routeKey       = "$context.routeKey"
-      status         = "$context.status"
-    })
-  }
+  lifecycle { create_before_destroy = true }
 }
 
-resource "aws_cloudwatch_log_group" "api_logs" {
-  name              = "/aws/apigatewayv2/${aws_apigatewayv2_api.pypi.name}"
-  retention_in_days = 14
+resource "aws_api_gateway_stage" "simple" {
+  deployment_id = aws_api_gateway_deployment.pypi.id
+  rest_api_id   = aws_api_gateway_rest_api.pypi.id
+  stage_name    = "simple"
 }
 
 #######################
@@ -71,8 +60,9 @@ resource "aws_cloudwatch_log_group" "api_logs" {
 module "serverless_pypi" {
   source = "./.."
 
-  api_id                              = aws_apigatewayv2_api.pypi.id
-  api_execution_arn                   = aws_apigatewayv2_api.pypi.execution_arn
+  api_id                              = aws_api_gateway_rest_api.pypi.id
+  api_execution_arn                   = aws_api_gateway_rest_api.pypi.execution_arn
+  api_root_resource_id                = aws_api_gateway_rest_api.pypi.root_resource_id
   iam_role_name                       = "serverless-pypi"
   lambda_api_fallback_index_url       = "https://pypi.org/simple/"
   lambda_api_function_name            = "serverless-pypi-api"
@@ -90,4 +80,4 @@ module "serverless_pypi" {
 #   OUTPUTS   #
 ###############
 
-output "endpoint" { value = "${aws_apigatewayv2_api.pypi.api_endpoint}/simple/" }
+output "endpoint" { value = "${aws_api_gateway_stage.simple.invoke_url}/" }
