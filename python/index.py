@@ -3,7 +3,6 @@ import logging
 import os
 import re
 from string import Template
-from distutils.version import StrictVersion
 from xml.etree import ElementTree as xml
 
 import boto3
@@ -272,10 +271,7 @@ def post_response(package, body):
     :param str body: POST body
     :return dict: Response
     """
-    if package is None:
-        return search(body)
-
-    return reject(403, message="Forbidden")
+    return reject(405, message="Not Allowed")
 
 
 def presign(key):
@@ -340,36 +336,6 @@ def reject(status_code, **kwargs):
     return dict(body=body, headers=headers, statusCode=status_code)
 
 
-def search(request):
-    """
-    Search for pips.
-
-    :param str request: XML request string
-    :return str: XML response
-    """
-    tree = xml.fromstring(request)
-    term = tree.find(".//string").text  # TODO this is not ideal
-
-    hits = {}
-    for page in S3_PAGINATOR.paginate(Bucket=S3_BUCKET):
-        for obj in page.get("Contents"):
-            key = obj.get("Key")
-            if term in key and "index.html" != key:
-                *_, name, tarball = key.split("/")
-                _, version = tarball.replace(".tar.gz", "").split(f"{name}-")
-                version = StrictVersion(version)
-                if name not in hits or hits[name]["version"] < version:
-                    hits[name] = dict(
-                        name=name,
-                        version=version,
-                        summary=f"s3://{S3_BUCKET}/{key}",
-                    )
-    data = [SEARCH_VALUE.safe_substitute(**x) for x in hits.values()]
-    body = SEARCH.safe_substitute(data="".join(data))
-    resp = proxy_reponse(body, "text/xml")
-    return resp
-
-
 class MiniTemplate(Template):
     def __init__(self, template):
         super().__init__(re.sub(r"\n *", "", template))
@@ -390,51 +356,5 @@ INDEX = MiniTemplate(
             $anchors
         </body>
     </html>
-    """
-)
-SEARCH = MiniTemplate(
-    """
-    <?xml version='1.0'?>
-    <methodResponse>
-        <params>
-            <param>
-                <value>
-                    <array>
-                        <data>$data</data>
-                    </array>
-                </value>
-            </param>
-        </params>
-    </methodResponse>
-    """
-)
-SEARCH_VALUE = MiniTemplate(
-    """
-    <struct>
-        <member>
-            <name>name</name>
-            <value>
-                <string>$name</string>
-            </value>
-        </member>
-        <member>
-            <name>summary</name>
-            <value>
-                <string>$summary</string>
-            </value>
-        </member>
-        <member>
-            <name>version</name>
-            <value>
-                <string>$version</string>
-            </value>
-        </member>
-        <member>
-            <name>_pypi_ordering</name>
-            <value>
-                <boolean>0</boolean>
-            </value>
-        </member>
-    </struct>
     """
 )

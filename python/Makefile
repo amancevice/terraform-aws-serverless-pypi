@@ -3,7 +3,7 @@ all: test
 clean:
 	rm -rf .venv
 
-test: | .venv
+test: .venv
 	pipenv run black --check index.py index_test.py
 	pipenv run pytest
 
@@ -12,8 +12,7 @@ up: .env
 
 .PHONY: all clean test up
 
-Pipfile.lock: Pipfile
-.venv: Pipfile.lock
+.venv: Pipfile
 	mkdir -p $@
 	pipenv install --dev
 	touch $@

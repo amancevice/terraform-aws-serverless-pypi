@@ -10,7 +10,7 @@ os.environ["S3_BUCKET"] = "serverless-pypi"
 
 with mock.patch("boto3.client"):
     import index
-    from index import ANCHOR, INDEX, SEARCH, SEARCH_VALUE
+    from index import ANCHOR, INDEX
 
 SIMPLE_INDEX = INDEX.safe_substitute(
     title="Simple index",
@@ -179,20 +179,6 @@ def test_proxy_request_get(event):
 @pytest.mark.parametrize(
     "event",
     [
-        {"version": "2.0", "routeKey": "POST /", "body": "<SEARCH_XML>"},
-        {"httpMethod": "POST", "body": "<SEARCH_XML>"},
-    ],
-)
-def test_proxy_reponse_post(event):
-    with mock.patch("index.search") as mock_search:
-        mock_search.return_value = index.proxy_reponse("{}")
-        index.proxy_request(event)
-        mock_search.assert_called_once_with("<SEARCH_XML>")
-
-
-@pytest.mark.parametrize(
-    "event",
-    [
         {
             "version": "2.0",
             "routeKey": "GET /fizz",
@@ -226,8 +212,8 @@ def test_proxy_request_get_package(event):
                 "routeKey": "POST /fizz",
                 "pathParameters": {"package": "fizz"},
             },
-            403,
-            "Forbidden",
+            405,
+            "Not Allowed",
         ),
     ],
 )
@@ -245,72 +231,3 @@ def test_reindex_bucket():
         Key="index.html",
         Body=SIMPLE_INDEX.encode(),
     )
-
-
-@pytest.mark.parametrize("pip", ["fizz"])
-def test_search(pip):
-    index.S3_PAGINATOR.paginate.return_value = iter(S3_INDEX_RESPONSE)
-    request = re.sub(
-        r"\n *",
-        "",
-        f"""
-        <?xml version='1.0'?>
-        <methodCall>
-          <methodName>search</methodName>
-          <params>
-            <param>
-              <value>
-                <struct>
-                  <member>
-                    <name>name</name>
-                    <value>
-                      <array>
-                        <data>
-                          <value>
-                            <string>{pip}</string>
-                          </value>
-                        </data>
-                      </array>
-                    </value>
-                  </member>
-                  <member>
-                    <name>summary</name>
-                    <value>
-                      <array>
-                        <data>
-                          <value>
-                            <string>{pip}</string>
-                          </value>
-                        </data>
-                      </array>
-                    </value>
-                  </member>
-                </struct>
-              </value>
-            </param>
-            <param>
-              <value>
-                <string>or</string>
-              </value>
-            </param>
-          </params>
-        </methodCall>
-    """,
-    )
-    body = SEARCH.safe_substitute(
-        data=SEARCH_VALUE.safe_substitute(
-            name="fizz",
-            summary="s3://serverless-pypi/fizz/fizz-1.2.3.tar.gz",
-            version="1.2.3",
-        )
-    )
-    ret = index.search(request)
-    exp = {
-        "body": body,
-        "statusCode": 200,
-        "headers": {
-            "content-length": len(body),
-            "content-type": "text/xml; charset=utf-8",
-        },
-    }
-    assert ret == exp
