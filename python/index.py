@@ -116,7 +116,7 @@ logger = LambdaLoggerAdapter("PyPI")
 
 
 @logger.attach
-def proxy_request(event, context=None):
+def proxy_request(event, *_):
     """
     Handle API Gateway proxy request.
     """
@@ -138,7 +138,7 @@ def proxy_request(event, context=None):
 
 
 @logger.attach
-def reindex_bucket(event=None, context=None):
+def reindex_bucket(*_):
     """
     Reindex S3 bucket.
     """
