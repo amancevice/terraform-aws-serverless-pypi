@@ -23,6 +23,11 @@ terraform {
 ##############
 
 locals {
+  event_rule = {
+    description = var.event_rule_description
+    name        = var.event_rule_name
+  }
+
   iam_role = {
     description = var.iam_role_description
     name        = var.iam_role_name
@@ -84,11 +89,6 @@ locals {
     bucket_tags       = var.s3_bucket_tags
     presigned_url_ttl = var.s3_presigned_url_ttl
   }
-
-  sns_topic = {
-    name = var.sns_topic_name
-    tags = var.sns_topic_tags
-  }
 }
 
 ####################
@@ -142,58 +142,35 @@ resource "aws_s3_object" "index" {
 data "aws_caller_identity" "current" {
 }
 
-data "aws_iam_policy_document" "topic_policy" {
-  statement {
-    actions   = ["sns:Publish"]
-    resources = ["arn:aws:sns:*:*:${local.sns_topic.name}"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["s3.amazonaws.com"]
-    }
-
-    condition {
-      test     = "ArnEquals"
-      variable = "aws:SourceArn"
-      values   = [aws_s3_bucket.pypi.arn]
-    }
-
-    condition {
-      test     = "StringEquals"
-      variable = "aws:SourceAccount"
-      values   = [data.aws_caller_identity.current.account_id]
-    }
-  }
-}
-
 resource "aws_s3_bucket_notification" "reindex" {
-  bucket = aws_s3_bucket.pypi.id
-
-  topic {
-    id            = "python-sdist"
-    events        = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
-    filter_suffix = ".tar.gz"
-    topic_arn     = aws_sns_topic.reindex.arn
-  }
-
-  topic {
-    id            = "python-wheel"
-    events        = ["s3:ObjectCreated:*", "s3:ObjectRemoved:*"]
-    filter_suffix = ".whl"
-    topic_arn     = aws_sns_topic.reindex.arn
-  }
+  bucket      = aws_s3_bucket.pypi.id
+  eventbridge = true
 }
 
-resource "aws_sns_topic" "reindex" {
-  name   = local.sns_topic.name
-  policy = data.aws_iam_policy_document.topic_policy.json
-  tags   = local.sns_topic.tags
+###################
+#   EVENTBRIDGE   #
+###################
+
+resource "aws_cloudwatch_event_rule" "reindex" {
+  description = local.event_rule.description
+  name        = local.event_rule.name
+
+  event_pattern = jsonencode({
+    source      = ["aws.s3"]
+    detail-type = ["Object Created", "Object Deleted"]
+
+    detail = {
+      bucket = { name = [aws_s3_bucket.pypi.id] }
+      object = { key = [{ anything-but = ["index.html"] }] }
+    }
+  })
 }
 
-resource "aws_sns_topic_subscription" "reindex" {
-  endpoint  = aws_lambda_function.reindex.arn
-  protocol  = "lambda"
-  topic_arn = aws_sns_topic.reindex.arn
+resource "aws_cloudwatch_event_target" "reindex" {
+  arn        = aws_lambda_function.reindex.arn
+  input_path = "$.detail"
+  rule       = aws_cloudwatch_event_rule.reindex.name
+  target_id  = "reindex"
 }
 
 ###########
@@ -296,7 +273,7 @@ resource "aws_lambda_function" "api" {
   }
 }
 
-resource "aws_lambda_permission" "invoke_api" {
+resource "aws_lambda_permission" "api" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.api.function_name
   principal     = "apigateway.amazonaws.com"
@@ -336,9 +313,8 @@ resource "aws_lambda_function" "reindex" {
 resource "aws_lambda_permission" "reindex" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.reindex.function_name
-  principal     = "sns.amazonaws.com"
-  qualifier     = aws_lambda_function.reindex.name
-  source_arn    = aws_sns_topic.reindex.arn
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.reindex.arn
 }
 
 ###########################
