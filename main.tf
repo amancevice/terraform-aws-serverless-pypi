@@ -37,26 +37,20 @@ locals {
   }
 
   lambda_api = {
-    alias_name             = var.lambda_api_alias_name
-    alias_function_version = var.lambda_api_alias_function_version
-    description            = var.lambda_api_description
-    function_name          = var.lambda_api_function_name
-    memory_size            = var.lambda_api_memory_size
-    publish                = var.lambda_api_publish
-    fallback_index_url     = var.lambda_api_fallback_index_url
-    tags                   = var.lambda_api_tags
-    timeout                = var.lambda_api_timeout
+    description        = var.lambda_api_description
+    function_name      = var.lambda_api_function_name
+    memory_size        = var.lambda_api_memory_size
+    fallback_index_url = var.lambda_api_fallback_index_url
+    tags               = var.lambda_api_tags
+    timeout            = var.lambda_api_timeout
   }
 
   lambda_reindex = {
-    alias_name             = var.lambda_reindex_alias_name
-    alias_function_version = var.lambda_reindex_alias_function_version
-    description            = var.lambda_reindex_description
-    function_name          = var.lambda_reindex_function_name
-    memory_size            = var.lambda_reindex_memory_size
-    publish                = var.lambda_reindex_publish
-    tags                   = var.lambda_reindex_tags
-    timeout                = var.lambda_reindex_timeout
+    description   = var.lambda_reindex_description
+    function_name = var.lambda_reindex_function_name
+    memory_size   = var.lambda_reindex_memory_size
+    tags          = var.lambda_reindex_tags
+    timeout       = var.lambda_reindex_timeout
   }
 
   log_group_api = {
@@ -197,7 +191,7 @@ resource "aws_sns_topic" "reindex" {
 }
 
 resource "aws_sns_topic_subscription" "reindex" {
-  endpoint  = aws_lambda_alias.reindex.arn
+  endpoint  = aws_lambda_function.reindex.arn
   protocol  = "lambda"
   topic_arn = aws_sns_topic.reindex.arn
 }
@@ -291,12 +285,6 @@ resource "aws_cloudwatch_log_group" "api" {
   tags              = local.log_group_api.tags
 }
 
-resource "aws_lambda_alias" "api" {
-  name             = local.lambda_api.alias_name
-  function_name    = aws_lambda_function.api.arn
-  function_version = local.lambda_api.alias_function_version
-}
-
 resource "aws_lambda_function" "api" {
   architectures    = ["arm64"]
   description      = local.lambda_api.description
@@ -304,7 +292,6 @@ resource "aws_lambda_function" "api" {
   function_name    = local.lambda_api.function_name
   handler          = "index.proxy_request"
   memory_size      = local.lambda_api.memory_size
-  publish          = local.lambda_api.publish
   role             = aws_iam_role.role.arn
   runtime          = local.lambda.runtime
   source_code_hash = local.lambda.source_code_hash
@@ -322,9 +309,8 @@ resource "aws_lambda_function" "api" {
 
 resource "aws_lambda_permission" "invoke_api" {
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_alias.api.function_name
+  function_name = aws_lambda_function.api.function_name
   principal     = "apigateway.amazonaws.com"
-  qualifier     = aws_lambda_alias.api.name
   source_arn    = "${local.rest_api.execution_arn}/*/*/*"
 }
 
@@ -338,12 +324,6 @@ resource "aws_cloudwatch_log_group" "reindex" {
   tags              = local.log_group_reindex.tags
 }
 
-resource "aws_lambda_alias" "reindex" {
-  name             = local.lambda_reindex.alias_name
-  function_name    = aws_lambda_function.reindex.arn
-  function_version = local.lambda_reindex.alias_function_version
-}
-
 resource "aws_lambda_function" "reindex" {
   architectures    = ["arm64"]
   description      = local.lambda_reindex.description
@@ -351,7 +331,6 @@ resource "aws_lambda_function" "reindex" {
   function_name    = local.lambda_reindex.function_name
   handler          = "index.reindex_bucket"
   memory_size      = local.lambda_reindex.memory_size
-  publish          = local.lambda_reindex.publish
   role             = aws_iam_role.role.arn
   runtime          = local.lambda.runtime
   source_code_hash = local.lambda.source_code_hash
@@ -367,9 +346,9 @@ resource "aws_lambda_function" "reindex" {
 
 resource "aws_lambda_permission" "reindex" {
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_alias.reindex.function_name
+  function_name = aws_lambda_function.reindex.function_name
   principal     = "sns.amazonaws.com"
-  qualifier     = aws_lambda_alias.reindex.name
+  qualifier     = aws_lambda_function.reindex.name
   source_arn    = aws_sns_topic.reindex.arn
 }
 
@@ -400,5 +379,5 @@ resource "aws_api_gateway_integration" "integrations" {
   http_method             = each.value.http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = aws_lambda_alias.api.invoke_arn
+  uri                     = aws_lambda_function.api.invoke_arn
 }
