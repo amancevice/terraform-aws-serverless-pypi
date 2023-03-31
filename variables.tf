@@ -69,12 +69,6 @@ variable "lambda_api_memory_size" {
   default     = 128
 }
 
-variable "lambda_api_publish" {
-  description = "PyPI API Lambda function publish trigger"
-  type        = bool
-  default     = false
-}
-
 variable "lambda_api_tags" {
   description = "Resource tags"
   type        = map(string)
@@ -108,12 +102,6 @@ variable "lambda_reindex_function_name" {
 variable "lambda_reindex_memory_size" {
   description = "Reindexer Lambda function memory size"
   default     = 128
-}
-
-variable "lambda_reindex_publish" {
-  description = "Reindexer Lambda function publish true/false"
-  type        = bool
-  default     = false
 }
 
 variable "lambda_reindex_tags" {
