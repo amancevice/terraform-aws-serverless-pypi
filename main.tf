@@ -259,20 +259,9 @@ resource "aws_iam_role" "role" {
 #########################
 
 data "archive_file" "package" {
-  source_dir  = "${path.module}/python"
+  source_file = "${path.module}/python/index.py"
   output_path = "${path.module}/python/package.zip"
   type        = "zip"
-
-  excludes = [
-    ".venv",
-    "Makefile",
-    "Pipfile",
-    "Pipfile.lock",
-    "index_test.py",
-    "package.zip",
-    "pyproject.toml",
-    "requirements.txt",
-  ]
 }
 
 ###########################
