@@ -26,22 +26,48 @@ As of v3 users are expected to bring-your-own HTTP (v2) API instead of providing
 The most simplistic setup is as follows:
 
 ```terraform
-resource "aws_apigatewayv2_api" "pypi" {
-  name          = "pypi"
-  protocol_type = "HTTP"
+################
+#   REST API   #
+################
+
+resource "aws_api_gateway_rest_api" "pypi" {
+  description = "Serverless PyPI example"
+  name        = "serverless-pypi"
+
+  endpoint_configuration { types = ["REGIONAL"] }
 }
+
+resource "aws_api_gateway_deployment" "pypi" {
+  rest_api_id = aws_api_gateway_rest_api.pypi.id
+
+  triggers = { redeployment = module.serverless_pypi.api_deployment_trigger }
+
+  lifecycle { create_before_destroy = true }
+}
+
+resource "aws_api_gateway_stage" "simple" {
+  deployment_id = aws_api_gateway_deployment.pypi.id
+  rest_api_id   = aws_api_gateway_rest_api.pypi.id
+  stage_name    = "simple"
+}
+
+#######################
+#   SERVERLESS PYPI   #
+#######################
 
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 4.1"
+  version = "~> 7"
 
-  api_id                       = aws_apigatewayv2_api.pypi.id
-  api_execution_arn            = aws_apigatewayv2_api.pypi.execution_arn
-  iam_role_name                = "serverless-pypi-role"
-  lambda_api_function_name     = "serverless-pypi-api"
-  lambda_reindex_function_name = "serverless-pypi-reindex"
-  s3_bucket_name               = "serverless-pypi"
-  sns_topic_name               = "serverless-pypi"
+  api_id                              = aws_api_gateway_rest_api.pypi.id
+  api_execution_arn                   = aws_api_gateway_rest_api.pypi.execution_arn
+  api_root_resource_id                = aws_api_gateway_rest_api.pypi.root_resource_id
+  iam_role_name                       = "serverless-pypi"
+  lambda_api_fallback_index_url       = "https://pypi.org/simple/"
+  lambda_api_function_name            = "serverless-pypi-api"
+  lambda_reindex_function_name        = "serverless-pypi-reindex"
+  s3_bucket_name                      = "serverless-pypi-us-west-2"
+  sns_topic_name                      = "serverless-pypi"
 
   # etc …
 }
