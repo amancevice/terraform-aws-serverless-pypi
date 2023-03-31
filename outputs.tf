@@ -52,8 +52,3 @@ output "lambda_reindex_log_group" {
   description = "Reindexer Lambda function CloudWatch log group"
   value       = aws_cloudwatch_log_group.reindex
 }
-
-output "sns_topic" {
-  description = "Reindexer SNS topic"
-  value       = aws_sns_topic.reindex
-}

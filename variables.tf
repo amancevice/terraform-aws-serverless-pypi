@@ -20,6 +20,15 @@ variable "api_root_resource_id" {
   description = "API Gateway REST API root resource ID"
 }
 
+variable "event_rule_name" {
+  description = "EventBridge reinexer rule name"
+}
+
+variable "event_rule_description" {
+  description = "EventBridge reinexer rule description"
+  default     = "Serverless PyPI reindex"
+}
+
 variable "iam_role_description" {
   description = "Lambda function IAM role description"
   default     = "PyPI Lambda permissions"
@@ -155,14 +164,4 @@ variable "s3_bucket_tags" {
 variable "s3_presigned_url_ttl" {
   description = "PyPI package presigned URL expiration in seconds"
   default     = 900
-}
-
-variable "sns_topic_name" {
-  description = "SNS Topic name"
-}
-
-variable "sns_topic_tags" {
-  description = "Resource tags"
-  type        = map(string)
-  default     = {}
 }
