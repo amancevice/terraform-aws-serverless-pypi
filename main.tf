@@ -111,9 +111,23 @@ resource "aws_s3_bucket_public_access_block" "pypi" {
 }
 
 resource "aws_s3_object" "index" {
-  bucket = aws_s3_bucket.pypi.id
-  key    = "index.html"
-  source = "${path.module}/index.html"
+  bucket  = aws_s3_bucket.pypi.id
+  key     = "index.html"
+  content = <<-EOT
+    <!DOCTYPE html>
+    <html>
+
+    <head>
+      <meta name="pypi:repository-version" content="1.0">
+      <title>Simple index</title>
+    </head>
+
+    <body>
+      <h1>Simple index</h1>
+    </body>
+
+    </html>
+  EOT
 
   lifecycle { ignore_changes = [content] }
 }
