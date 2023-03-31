@@ -26,6 +26,27 @@ As of v3 users are expected to bring-your-own HTTP (v2) API instead of providing
 The most simplistic setup is as follows:
 
 ```terraform
+#######################
+#   SERVERLESS PYPI   #
+#######################
+
+module "serverless_pypi" {
+  source  = "amancevice/serverless-pypi/aws"
+  version = "~> 7"
+
+  api_execution_arn             = aws_api_gateway_rest_api.pypi.execution_arn
+  api_id                        = aws_api_gateway_rest_api.pypi.id
+  api_root_resource_id          = aws_api_gateway_rest_api.pypi.root_resource_id
+  event_rule_name               = "serverless-pypi-reindex"
+  iam_role_name                 = "serverless-pypi"
+  lambda_api_fallback_index_url = "https://pypi.org/simple/"
+  lambda_api_function_name      = "serverless-pypi-api"
+  lambda_reindex_function_name  = "serverless-pypi-reindex"
+  s3_bucket_name                = "serverless-pypi-us-west-2"
+
+  # etc …
+}
+
 ################
 #   REST API   #
 ################
@@ -49,27 +70,6 @@ resource "aws_api_gateway_stage" "simple" {
   deployment_id = aws_api_gateway_deployment.pypi.id
   rest_api_id   = aws_api_gateway_rest_api.pypi.id
   stage_name    = "simple"
-}
-
-#######################
-#   SERVERLESS PYPI   #
-#######################
-
-module "serverless_pypi" {
-  source  = "amancevice/serverless-pypi/aws"
-  version = "~> 7"
-
-  api_id                              = aws_api_gateway_rest_api.pypi.id
-  api_execution_arn                   = aws_api_gateway_rest_api.pypi.execution_arn
-  api_root_resource_id                = aws_api_gateway_rest_api.pypi.root_resource_id
-  iam_role_name                       = "serverless-pypi"
-  lambda_api_fallback_index_url       = "https://pypi.org/simple/"
-  lambda_api_function_name            = "serverless-pypi-api"
-  lambda_reindex_function_name        = "serverless-pypi-reindex"
-  s3_bucket_name                      = "serverless-pypi-us-west-2"
-  sns_topic_name                      = "serverless-pypi"
-
-  # etc …
 }
 ```
 
