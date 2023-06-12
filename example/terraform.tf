@@ -44,7 +44,7 @@ module "serverless_pypi" {
   api_execution_arn                   = aws_api_gateway_rest_api.pypi.execution_arn
   api_root_resource_id                = aws_api_gateway_rest_api.pypi.root_resource_id
   event_rule_name                     = "serverless-pypi-reindex"
-  iam_role_name                       = "serverless-pypi"
+  iam_role_name                       = "us-west-2-serverless-pypi"
   lambda_api_fallback_index_url       = "https://pypi.org/simple/"
   lambda_api_function_name            = "serverless-pypi-api"
   lambda_reindex_function_name        = "serverless-pypi-reindex"
