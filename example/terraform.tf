@@ -51,7 +51,7 @@ module "serverless_pypi" {
   lambda_reindex_timeout              = 14
   log_group_api_retention_in_days     = 14
   log_group_reindex_retention_in_days = 14
-  s3_bucket_name                      = "serverless-pypi-us-west-2"
+  s3_bucket_name                      = "us-west-2-serverless-pypi"
 }
 
 ###############

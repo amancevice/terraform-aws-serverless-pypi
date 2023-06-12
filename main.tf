@@ -100,11 +100,6 @@ resource "aws_s3_bucket" "pypi" {
   tags   = local.s3.bucket_tags
 }
 
-resource "aws_s3_bucket_acl" "pypi" {
-  bucket = aws_s3_bucket.pypi.id
-  acl    = "private"
-}
-
 resource "aws_s3_bucket_public_access_block" "pypi" {
   block_public_acls       = true
   block_public_policy     = true
