@@ -126,7 +126,7 @@ variable "lambda_reindex_timeout" {
 
 variable "lambda_runtime" {
   description = "Lambda runtime"
-  default     = "python3.10"
+  default     = "python3.11"
 }
 
 variable "log_group_api_retention_in_days" {
