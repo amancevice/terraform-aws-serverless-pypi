@@ -1,8 +1,8 @@
-BUCKET   := serverless-pypi-us-west-2
+BUCKET   := us-west-2-serverless-pypi
 ENDPOINT := $(shell terraform output -raw endpoint)
 
 curl:
-	curl -s $(ENDPOINT)/requests-iamauth/ | prettier --parser html | bat -l html
+	curl -s $(ENDPOINT)requests-iamauth/ | prettier --parser html | bat -l html
 
 logs:
 	aws logs describe-log-groups --region us-west-2 \
@@ -11,8 +11,13 @@ logs:
 	| fzf --no-info --reverse \
 	| xargs aws logs tail --follow
 
-upload:
-	curl -so- https://files.pythonhosted.org/packages/d0/d5/a2263aede309463cec2a1a5046b9e5b314b7ed4a8273c7c214af619700bb/requests-iamauth-0.3.0.tar.gz#sha256=189cc26ccf641afb8e7f1ec4a16f902f70bf57d818075c08412d0d86d4b04729 \
-	| aws s3 cp - s3://$(BUCKET)/requests-iamauth/requests-iamauth-0.3.0.tar.gz
+ls:
+	aws s3 ls s3://$(BUCKET)/ --recursive
 
-.PHONY: curl logs upload
+upload: requests_iamauth-0.7.0-py3-none-any.whl
+	aws s3 cp $< s3://$(BUCKET)/requests-iamauth/$<
+
+.PHONY: curl logs ls upload
+
+requests_iamauth-%-py3-none-any.whl:
+	pip download --no-deps requests-iamauth==$*
