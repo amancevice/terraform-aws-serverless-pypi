@@ -8,13 +8,55 @@ provider "aws" {
   default_tags { tags = { Name = "serverless-pypi-example" } }
 }
 
+###########
+#   DNS   #
+###########
+
+variable "domain_name" { type = string }
+
+data "aws_acm_certificate" "ssl" {
+  domain   = var.domain_name
+  statuses = ["ISSUED"]
+}
+
+data "aws_route53_zone" "zone" {
+  name = var.domain_name
+}
+
+resource "aws_api_gateway_domain_name" "pypi" {
+  domain_name              = "pypi.${var.domain_name}"
+  regional_certificate_arn = data.aws_acm_certificate.ssl.arn
+
+  endpoint_configuration { types = ["REGIONAL"] }
+}
+
+resource "aws_api_gateway_base_path_mapping" "pypi" {
+  api_id      = aws_api_gateway_rest_api.pypi.id
+  base_path   = aws_api_gateway_stage.simple.stage_name
+  domain_name = aws_api_gateway_domain_name.pypi.domain_name
+  stage_name  = aws_api_gateway_stage.simple.stage_name
+}
+
+resource "aws_route53_record" "pypi" {
+  name    = aws_api_gateway_domain_name.pypi.domain_name
+  type    = "A"
+  zone_id = data.aws_route53_zone.zone.id
+
+  alias {
+    evaluate_target_health = true
+    name                   = aws_api_gateway_domain_name.pypi.regional_domain_name
+    zone_id                = aws_api_gateway_domain_name.pypi.regional_zone_id
+  }
+}
+
 ##################
 #   API GATEWAY  #
 ##################
 
 resource "aws_api_gateway_rest_api" "pypi" {
-  description = "Serverless PyPI example"
-  name        = "serverless-pypi"
+  description                  = "Serverless PyPI example"
+  disable_execute_api_endpoint = true
+  name                         = "serverless-pypi"
 
   endpoint_configuration { types = ["REGIONAL"] }
 }
@@ -58,4 +100,4 @@ module "serverless_pypi" {
 #   OUTPUTS   #
 ###############
 
-output "endpoint" { value = "${aws_api_gateway_stage.simple.invoke_url}/" }
+output "endpoint" { value = "https://${aws_api_gateway_base_path_mapping.pypi.domain_name}/${aws_api_gateway_base_path_mapping.pypi.base_path}/" }
