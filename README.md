@@ -21,7 +21,7 @@ Package uploads/removals on S3 will trigger a Lambda function that reindexes the
 
 ## Usage
 
-As of v3 users are expected to bring-your-own HTTP (v2) API instead of providing one inside the module. This gives users greater flexibility in choosing how their API is set up.
+As of v7 users are expected to bring-your-own REST API (v1). This gives users greater flexibility in choosing how their API is set up.
 
 The most simplistic setup is as follows:
 
@@ -109,7 +109,7 @@ Instead, if you configure a fallback index URL in the terraform module, then req
 ```terraform
 module "serverless_pypi" {
   source  = "amancevice/serverless-pypi/aws"
-  version = "~> 4.1"
+  version = "~> 7"
 
   lambda_api_fallback_index_url = "https://pypi.org/simple/"
 
@@ -121,30 +121,4 @@ module "serverless_pypi" {
 
 Please note that this tool provides **NO** authentication layer for your PyPI index out of the box. This is difficult to implement because `pip` is currently not very forgiving with any kind of auth pattern outside Basic Auth.
 
-### Cognito Basic Auth
-
-I have provided a _very_ simple authentication implementation using AWS Cognito and API Gateway authorizers.
-
-Add a Cognito-backed Basic authentication layer to your serverless PyPI with the `serverless-pypi-cognito` module:
-
-```terraform
-module "serverless_pypi" {
-  source  = "amancevice/serverless-pypi/aws"
-  version = "~> 4.1"
-
-  api_authorization_type = "CUSTOM"
-  api_authorizer_id      = module.serverless_pypi_cognito.api_authorizer.id
-
-  # …
-}
-
-module "serverless_pypi_cognito" {
-  source  = "amancevice/serverless-pypi-cognito/aws"
-  version = "~> 2.0"
-
-  api_id                 = aws_apigatewayv2_api.pypi.id
-  cognito_user_pool_name = "serverless-pypi-cognito-pool"
-  iam_role_name          = module.serverless_pypi.iam_role.name
-  lambda_function_name   = "serverless-pypi-authorizer"
-}
-```
+Using a REST API configured for a private VPC is the easiest solution to this problem, but you could also write a custom authorizer for your API as well.
