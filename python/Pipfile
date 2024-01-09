@@ -13,6 +13,3 @@ pytest-cov = "*"
 
 [packages]
 boto3 = "*"
-
-[requires]
-python_version = "3.11"
