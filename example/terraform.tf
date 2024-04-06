@@ -3,9 +3,18 @@
 ###########
 
 provider "aws" {
-  region = "us-west-2"
+  region = local.region
 
-  default_tags { tags = { Name = "serverless-pypi-example" } }
+  default_tags { tags = { Name = local.name } }
+}
+
+##############
+#   LOCALS   #
+##############
+
+locals {
+  region = "us-west-2"
+  name   = "serverless-pypi"
 }
 
 ###########
@@ -109,15 +118,15 @@ module "serverless_pypi" {
   api_id                              = aws_api_gateway_rest_api.pypi.id
   api_execution_arn                   = aws_api_gateway_rest_api.pypi.execution_arn
   api_root_resource_id                = aws_api_gateway_rest_api.pypi.root_resource_id
-  event_rule_name                     = "serverless-pypi-reindex"
-  iam_role_name                       = "us-west-2-serverless-pypi"
+  event_rule_name                     = "${local.name}-reindex"
+  iam_role_name                       = "${local.region}-${local.name}"
   lambda_api_fallback_index_url       = "https://pypi.org/simple/"
-  lambda_api_function_name            = "serverless-pypi-api"
-  lambda_reindex_function_name        = "serverless-pypi-reindex"
+  lambda_api_function_name            = "${local.name}-api"
+  lambda_reindex_function_name        = "${local.name}-reindex"
   lambda_reindex_timeout              = 14
   log_group_api_retention_in_days     = 14
   log_group_reindex_retention_in_days = 14
-  s3_bucket_name                      = "us-west-2-serverless-pypi"
+  s3_bucket_name                      = "${local.region}-${local.name}"
 }
 
 ###############
