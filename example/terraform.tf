@@ -27,21 +27,14 @@ data "aws_route53_zone" "zone" {
   name = var.domain_name
 }
 
-resource "aws_acm_certificate" "pypi" {
-  domain_name       = "pypi.${data.aws_route53_zone.zone.name}"
-  validation_method = "DNS"
-
-  lifecycle { create_before_destroy = true }
-}
-
-resource "aws_acm_certificate_validation" "pypi" {
-  certificate_arn         = aws_acm_certificate.pypi.arn
-  validation_record_fqdns = [for record in aws_route53_record.ssl : record.fqdn]
+data "aws_acm_certificate" "ssl" {
+  domain   = var.domain_name
+  statuses = ["ISSUED"]
 }
 
 resource "aws_api_gateway_domain_name" "pypi" {
   domain_name              = "pypi.${var.domain_name}"
-  regional_certificate_arn = aws_acm_certificate.pypi.arn
+  regional_certificate_arn = data.aws_acm_certificate.ssl.arn
 
   endpoint_configuration { types = ["REGIONAL"] }
 }
@@ -53,32 +46,22 @@ resource "aws_api_gateway_base_path_mapping" "pypi" {
   stage_name  = aws_api_gateway_stage.simple.stage_name
 }
 
-resource "aws_route53_record" "ssl" {
-  for_each = {
-    for dvo in aws_acm_certificate.pypi.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  records         = [each.value.record]
-  ttl             = 60
-  type            = each.value.type
-  zone_id         = data.aws_route53_zone.zone.zone_id
-}
-
 resource "aws_route53_record" "pypi" {
-  name    = aws_api_gateway_domain_name.pypi.domain_name
-  type    = "A"
-  zone_id = data.aws_route53_zone.zone.id
+  for_each = toset(["A", "AAAA"])
+
+  name           = aws_api_gateway_domain_name.pypi.domain_name
+  set_identifier = local.region
+  type           = each.key
+  zone_id        = data.aws_route53_zone.zone.id
 
   alias {
-    evaluate_target_health = true
+    evaluate_target_health = false
     name                   = aws_api_gateway_domain_name.pypi.regional_domain_name
     zone_id                = aws_api_gateway_domain_name.pypi.regional_zone_id
+  }
+
+  latency_routing_policy {
+    region = local.region
   }
 }
 
