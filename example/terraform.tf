@@ -13,7 +13,7 @@ provider "aws" {
 ##############
 
 locals {
-  region = "us-west-2"
+  region = "us-east-1"
   name   = "serverless-pypi"
 }
 
