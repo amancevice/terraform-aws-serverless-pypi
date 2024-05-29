@@ -16,6 +16,5 @@ __pycache__/
 *.iid
 *.whl
 *.zip
-.python-version
 .terraform.lock.hcl
 coverage.xml
