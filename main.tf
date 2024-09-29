@@ -172,58 +172,60 @@ resource "aws_cloudwatch_event_target" "reindex" {
 #   IAM   #
 ###########
 
-data "aws_iam_policy_document" "assume_role" {
-  statement {
-    actions = ["sts:AssumeRole"]
-
-    principals {
-      type        = "Service"
-      identifiers = ["lambda.amazonaws.com"]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "policy" {
-  statement {
-    sid       = "ListBucket"
-    actions   = ["s3:ListBucket"]
-    resources = [aws_s3_bucket.pypi.arn]
-  }
-
-  statement {
-    sid       = "GetObjects"
-    actions   = ["s3:GetObject"]
-    resources = ["${aws_s3_bucket.pypi.arn}/*"]
-  }
-
-  statement {
-    sid       = "PutIndex"
-    actions   = ["s3:PutObject"]
-    resources = ["${aws_s3_bucket.pypi.arn}/index.html"]
-  }
-
-  statement {
-    sid       = "WriteLambdaLogs"
-    resources = ["*"]
-
-    actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:PutLogEvents",
-    ]
-  }
-}
-
 resource "aws_iam_role" "role" {
-  assume_role_policy = data.aws_iam_policy_document.assume_role.json
-  description        = local.iam_role.description
-  name               = local.iam_role.name
-  tags               = local.iam_role.tags
+  description = local.iam_role.description
+  name        = local.iam_role.name
+  tags        = local.iam_role.tags
 
-  inline_policy {
-    name   = local.iam_role.policy_name
-    policy = data.aws_iam_policy_document.policy.json
-  }
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AssumeRole"
+      Effect    = "Allow"
+      Action    = "sts:AssumeRole"
+      Principal = { Service = "lambda.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "policy" {
+  role = aws_iam_role.role.id
+  name = local.iam_role.policy_name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "ListBucket"
+        Effect   = "Allow"
+        Action   = "s3:ListBucket"
+        Resource = aws_s3_bucket.pypi.arn
+      },
+      {
+        Sid      = "GetObjects"
+        Effect   = "Allow"
+        Action   = "s3:GetObject"
+        Resource = "${aws_s3_bucket.pypi.arn}/*"
+      },
+      {
+        Sid      = "PutIndex"
+        Effect   = "Allow"
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.pypi.arn}/index.html"
+      },
+      {
+        Sid      = "WriteLambdaLogs"
+        Effect   = "Allow"
+        Resource = "*"
+
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+        ]
+      }
+    ]
+  })
 }
 
 #########################
