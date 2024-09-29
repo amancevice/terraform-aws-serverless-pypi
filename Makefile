@@ -8,7 +8,6 @@ test:
 	make -C python test
 
 validate:
-	#terraform fmt -check
 	make -C example validate
 
 .PHONY: test validate
