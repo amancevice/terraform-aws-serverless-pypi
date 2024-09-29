@@ -189,8 +189,8 @@ resource "aws_iam_role" "role" {
 }
 
 resource "aws_iam_role_policy" "policy" {
-  role = aws_iam_role.role.id
   name = local.iam_role.policy_name
+  role = aws_iam_role.role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
