@@ -15,7 +15,8 @@ up: .env
 Pipfile.lock: Pipfile | .venv
 	pipenv lock
 
-.venv: Pipfile
+.venv: .python-version Pipfile
+	-pipenv --rm
 	mkdir -p $@
 	pipenv install --dev
 	touch $@
