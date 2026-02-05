@@ -343,8 +343,7 @@ class MiniTemplate(Template):
 
 ROUTES = dict(GET=get_response, HEAD=head_response, POST=post_response)
 ANCHOR = MiniTemplate('<a href="$href">$name</a><br>')
-INDEX = MiniTemplate(
-    """
+INDEX = MiniTemplate("""
     <!DOCTYPE html>
     <html>
         <head>
@@ -356,5 +355,4 @@ INDEX = MiniTemplate(
             $anchors
         </body>
     </html>
-    """
-)
+""")
