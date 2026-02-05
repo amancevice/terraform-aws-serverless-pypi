@@ -3,7 +3,6 @@ import logging
 import os
 import re
 from string import Template
-from xml.etree import ElementTree as xml
 
 import boto3
 

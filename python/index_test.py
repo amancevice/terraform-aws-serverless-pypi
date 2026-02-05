@@ -1,7 +1,6 @@
 import io
 import json
 import os
-import re
 from unittest import mock
 
 import pytest
