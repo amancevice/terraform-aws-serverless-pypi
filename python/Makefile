@@ -4,7 +4,7 @@ clean:
 	pipenv --rm
 
 test: Pipfile.lock
-	pipenv run black --check --diff index.py index_test.py
+	pipenv run ruff check index*.py
 	pipenv run pytest
 
 up: .env
