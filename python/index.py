@@ -28,7 +28,7 @@ class SuppressFilter(logging.Filter):
 
     def filter(self, record):
         logger = record.name
-        return False if self.logger in logger else True
+        return self.logger not in logger
 
 
 class LambdaLoggerAdapter(logging.LoggerAdapter):
@@ -56,7 +56,7 @@ class LambdaLoggerAdapter(logging.LoggerAdapter):
             handler.addFilter(logFilter)
 
         # Initialize adapter with null RequestId
-        super().__init__(logger, dict(reqid="-"))
+        super().__init__(logger, {"reqid": "-"})
 
     def attach(self, handler):
         """
@@ -284,7 +284,7 @@ def presign(key):
         "get_object",
         ExpiresIn=S3_PRESIGNED_URL_TTL,
         HttpMethod="GET",
-        Params=dict(Bucket=S3_BUCKET, Key=key),
+        Params={"Bucket": S3_BUCKET, "Key": key},
     )
     return url
 
@@ -316,7 +316,7 @@ def redirect(path):
     :param str path: Rejection status code
     :return dict: Redirection response
     """
-    return dict(statusCode=301, headers={"Location": path})
+    return {"statusCode": 301, "headers": {"Location": path}}
 
 
 def reject(status_code, **kwargs):
@@ -332,7 +332,7 @@ def reject(status_code, **kwargs):
         "content-length": len(body),
         "content-type": "application/json; charset=utf-8",
     }
-    return dict(body=body, headers=headers, statusCode=status_code)
+    return {"body": body, "headers":headers, "statusCode": status_code}
 
 
 class MiniTemplate(Template):
@@ -340,7 +340,7 @@ class MiniTemplate(Template):
         super().__init__(re.sub(r"\n *", "", template))
 
 
-ROUTES = dict(GET=get_response, HEAD=head_response, POST=post_response)
+ROUTES = {"GET": get_response, "HEAD": head_response, "POST": post_response}
 ANCHOR = MiniTemplate('<a href="$href">$name</a><br>')
 INDEX = MiniTemplate("""
     <!DOCTYPE html>
