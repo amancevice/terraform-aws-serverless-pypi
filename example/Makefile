@@ -9,6 +9,8 @@ clean:
 curl:
 	curl -s $(ENDPOINT)requests-iamauth/ | prettier --parser html | bat -l html
 
+lock:
+
 logs:
 	aws logs describe-log-groups --region us-west-2 \
 	| jq -r '.logGroups[].logGroupName' \

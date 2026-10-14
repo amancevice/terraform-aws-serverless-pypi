@@ -1,7 +1,12 @@
 all: test
 
+build: .venv
+
 clean:
-	pipenv --rm
+	-pipenv remove
+	-rm -f Pipfile.lock
+
+lock: clean build
 
 test: Pipfile.lock
 	pipenv run ruff check index*.py
@@ -10,7 +15,7 @@ test: Pipfile.lock
 up: .env
 	pipenv run python -m lambda_gateway index.proxy_request
 
-.PHONY: all clean test up
+.PHONY: all build clean lock test up
 
 Pipfile.lock: Pipfile | .venv
 	pipenv lock

@@ -1,8 +1,8 @@
 all: test validate
 
-clean:
-	make -C example clean
-	make -C python clean
+clean lock:
+	make -C example $@
+	make -C python $@
 
 test:
 	make -C python test
@@ -10,4 +10,4 @@ test:
 validate:
 	make -C example validate
 
-.PHONY: test validate
+.PHONY: lock test validate
